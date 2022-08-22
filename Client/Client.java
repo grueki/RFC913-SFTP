@@ -1,5 +1,6 @@
 package Client;
 
+import java.awt.event.ActionListener;
 import java.io.*;
 import java.net.*;
 import java.util.Objects;
@@ -8,31 +9,49 @@ public class Client {
     static String HOST_DOMAIN = "localhost";
     static int PORT_NUM = 3000;
 
-    public static void main(String[] args) throws Exception {
-        String sentence = null;
-        String modifiedSentence = null;
+    private static Socket clientSocket;
 
-        BufferedReader inFromUser =
-                new BufferedReader(new InputStreamReader(System.in));
+    private BufferedReader inFromServer;
+    private DataOutputStream outToServer;
 
-        Socket clientSocket = new Socket(HOST_DOMAIN, PORT_NUM);
+    private BufferedReader inFromUser;
 
-        DataOutputStream outToServer =
-                new DataOutputStream(clientSocket.getOutputStream());
+    public void start() throws IOException {
+        String message;
+        String response;
 
-        BufferedReader inFromServer =
-                new BufferedReader(new
-                        InputStreamReader(clientSocket.getInputStream()));
+        clientSocket = new Socket(HOST_DOMAIN, PORT_NUM);
+        inFromUser = new BufferedReader(new InputStreamReader(System.in));
+        outToServer = new DataOutputStream(clientSocket.getOutputStream());
+        inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
-        sentence = inFromUser.readLine();
+        while (inFromUser != null) {
+            message = inFromUser.readLine();
+            if ("DONE".equals(message)) {
+                stop();
+            }
+            else {
+                response = sendMessage(message);
+                System.out.println("FROM SERVER: " + response);
+            }
+        }
+    }
 
-        outToServer.writeBytes(sentence + '\n');
+    public String sendMessage(String msg) throws IOException {
+        outToServer.writeBytes(msg + "\n");
+        return inFromServer.readLine();
+    }
 
-        modifiedSentence = inFromServer.readLine();
-
-        System.out.println("FROM SERVER: " + modifiedSentence);
-
+    public void stop() throws IOException {
+        inFromServer.close();
+        outToServer.close();
+        inFromUser.close();
         clientSocket.close();
+        System.exit(0);
+    }
 
+    public static void main(String[] args) throws IOException {
+        Client myClient = new Client();
+        myClient.start();
     }
 }

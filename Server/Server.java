@@ -7,33 +7,40 @@ class Server {
     static String HOST_DOMAIN = "localhost";
     static int PORT_NUM = 3000;
 
-    public static void main(String[] args)
-    {
-        try {
-            String clientSentence;
-            String capitalizedSentence;
+    private ServerSocket serverSocket;
+    private Socket clientSocket;
 
-            ServerSocket welcomeSocket = new ServerSocket(PORT_NUM);
+    private BufferedReader inFromClient;
+    private DataOutputStream outToClient;
 
-            while (true) {
+    public void start() throws IOException {
+        serverSocket = new ServerSocket(PORT_NUM);
+        clientSocket = serverSocket.accept();
 
-                Socket connectionSocket = welcomeSocket.accept();
+        inFromClient = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+        outToClient = new DataOutputStream(clientSocket.getOutputStream());
 
-                BufferedReader inFromClient =
-                        new BufferedReader(new
-                                InputStreamReader(connectionSocket.getInputStream()));
-
-                DataOutputStream outToClient =
-                        new DataOutputStream(connectionSocket.getOutputStream());
-
-                clientSentence = inFromClient.readLine();
-
-                capitalizedSentence = clientSentence.toUpperCase() + '\n';
-
-                outToClient.writeBytes(capitalizedSentence);
+        String inputLine;
+        while ((inputLine = inFromClient.readLine()) != null) {
+            if ("DONE".equals(inputLine)) {
+                stop();
             }
-        } catch (Exception e) {
-            System.out.println(e);
+            else {
+                outToClient.writeBytes("Recieved your message, \"" + inputLine + "\"! :)\n");
+            }
         }
+    }
+
+    public void stop() throws IOException {
+        inFromClient.close();
+        outToClient.close();
+        clientSocket.close();
+        serverSocket.close();
+        System.exit(0);
+    }
+
+    public static void main(String[] args) throws IOException {
+        Server myServer = new Server();
+        myServer.start();
     }
 }
