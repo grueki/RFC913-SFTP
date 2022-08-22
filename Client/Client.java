@@ -2,17 +2,20 @@ package Client;
 
 import java.io.*;
 import java.net.*;
+import java.util.Objects;
 
 public class Client {
+    static String HOST_DOMAIN = "localhost";
+    static int PORT_NUM = 3000;
 
     public static void main(String[] args) throws Exception {
-        String sentence;
-        String modifiedSentence;
+        String sentence = null;
+        String modifiedSentence = null;
 
         BufferedReader inFromUser =
                 new BufferedReader(new InputStreamReader(System.in));
 
-        Socket clientSocket = new Socket("localhost", 6789);
+        Socket clientSocket = new Socket(HOST_DOMAIN, PORT_NUM);
 
         DataOutputStream outToServer =
                 new DataOutputStream(clientSocket.getOutputStream());
