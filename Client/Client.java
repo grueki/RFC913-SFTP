@@ -1,9 +1,10 @@
 package Client;
 
-import java.awt.event.ActionListener;
-import java.io.*;
-import java.net.*;
-import java.util.Objects;
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.Socket;
 
 public class Client {
     static String HOST_DOMAIN = "localhost";

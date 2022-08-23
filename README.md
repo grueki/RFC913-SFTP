@@ -8,15 +8,17 @@ Although this implementation is designed to be cross-platform, and will work on 
 
 1. Open a new command prompt
 2. Change directory to the `RFC 913/Server` directory
-3. Execute the 'run' script with `./run.sh` to start the server
-4. A message will be displayed stating that the server was successfully started
+3. (First time only) Execute the following command to give `run.sh` permission: `chmod +x ./run.sh`
+4. Execute the 'run' script with `./run.sh` to start the server
+5. A message will be displayed stating that the server was successfully started
 
 **Client Setup**
 
 1. Open a new command prompt
-2. Change directory to the `RFC 913/Client` directory
-3. Execute the 'run' script with `./run.sh` to start the client
-4. A message will be displayed stating that the client successfully connected to the server followed by a greeting from the server
+2. Change directory to the `RFC 913/Client` directory 
+3. (First time only) Execute the following command to give `run.sh` permission: `chmod +x ./run.sh`
+4. Execute the 'run' script with `./run.sh` to start the client
+5. A message will be displayed stating that the client successfully connected to the server followed by a greeting from the server
 
 Once a client has connected to the server, commands can be sent and the server will respond accordingly.
 
