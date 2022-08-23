@@ -26,6 +26,8 @@ public class Client {
         outToServer = new DataOutputStream(clientSocket.getOutputStream());
         inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
+        System.out.println(inFromServer.readLine());
+
         while (inFromUser != null) {
             message = inFromUser.readLine();
             if ("DONE".equals(message)) {

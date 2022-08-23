@@ -18,11 +18,20 @@ class Server {
 
     public void start() throws IOException {
         serverSocket = new ServerSocket(PORT_NUM);
+        System.out.println("Server listening on port " + PORT_NUM + "!");
+
         clientSocket = serverSocket.accept();
+        System.out.println("Client connected!");
 
         inFromClient = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
         outToClient = new DataOutputStream(clientSocket.getOutputStream());
 
+        InetAddress ip = InetAddress.getLocalHost();
+        String hostname = ip.getHostName();
+        outToClient.writeBytes("+" + hostname + ": Welcome to the server! You're now connected on port " + PORT_NUM + ".\n");
+    }
+
+    public void loop() throws IOException {
         String inputLine;
         while ((inputLine = inFromClient.readLine()) != null) {
             if ("DONE".equals(inputLine)) {
