@@ -29,18 +29,27 @@ class Server {
         InetAddress ip = InetAddress.getLocalHost();
         String hostname = ip.getHostName();
         outToClient.writeBytes("+" + hostname + ": Welcome to the server! You're now connected on port " + PORT_NUM + ".\n");
+
+        boolean done = false;
+
+        while (!done) {
+            done = loop();
+        }
+
+        stop();
     }
 
-    public void loop() throws IOException {
+    public boolean loop() throws IOException {
         String inputLine;
-        while ((inputLine = inFromClient.readLine()) != null) {
+        if ((inputLine = inFromClient.readLine()) != null) {
             if ("DONE".equals(inputLine)) {
-                stop();
+                return true;
             }
             else {
                 outToClient.writeBytes("Recieved your message, \"" + inputLine + "\"! :)\n");
             }
         }
+        return false;
     }
 
     public void stop() throws IOException {
