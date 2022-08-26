@@ -30,13 +30,14 @@ public class Client {
 
         while (inFromUser != null) {
             message = inFromUser.readLine();
+
+            response = sendMessage(message);
+            System.out.println("FROM SERVER: " + response);
+
             if ("DONE".equals(message)) {
                 stop();
             }
-            else {
-                response = sendMessage(message);
-                System.out.println("FROM SERVER: " + response);
-            }
+
         }
     }
 
