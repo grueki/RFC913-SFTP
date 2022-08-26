@@ -1,0 +1,6 @@
+[user_only,,]
+[user_w_pwd,,pass1]
+[user_w_acc,acc1,]
+[user_w_both,acc2,pass2]
+[multi_acc,acc1|acc2|acc3,,]
+[multi_acc_w_pwd,acc1|acc2|acc3|acc4,pass3]
