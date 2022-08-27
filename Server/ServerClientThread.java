@@ -5,7 +5,10 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -25,7 +28,8 @@ public class ServerClientThread extends Thread {
     String userId;
     String userAcc;
     String transmissionType = "B";
-    String currentDir = System.getProperty("user.dir");
+    File rootDir = new File(System.getProperty("user.dir"));
+    String currentDir = "";
     boolean isLoggedIn = false;
     int linesToRead = 1;
 
@@ -85,7 +89,7 @@ public class ServerClientThread extends Thread {
                         LIST(clientCmd[1]);
                         break;
                     case "CDIR":
-                        CDIR();
+                        CDIR(clientCmd[1]);
                         break;
                     case "KILL":
                         KILL();
@@ -151,11 +155,7 @@ public class ServerClientThread extends Thread {
 
     public void ACCT(String acc_input) throws IOException {
         BufferedReader br = new BufferedReader(new FileReader(LOGIN_DB));
-        String[] userInfo;
-
-        do {
-            userInfo = br.readLine().split(",");
-        } while (!userInfo[0].equals(userId));
+        String[] userInfo = getUserInfo();
 
         boolean foundAcc = false;
 
@@ -190,11 +190,7 @@ public class ServerClientThread extends Thread {
 
     public void PASS(String pass_input) throws IOException {
         BufferedReader br = new BufferedReader(new FileReader(LOGIN_DB));
-        String[] userInfo;
-
-        do {
-            userInfo = br.readLine().split(",");
-        } while (!userInfo[0].equals(userId));
+        String[] userInfo = getUserInfo();
 
         boolean passwordSatisfied = false;
 
@@ -261,70 +257,122 @@ public class ServerClientThread extends Thread {
         }
     }
 
-    public void LIST(String list_cmd) {
-        String[] list_args = list_cmd.split("\\s+");
+    public void LIST(String list_cmd) throws IOException {
+        if (isLoggedIn) {
+            String[] list_args = list_cmd.split("\\s+");
 
-        String dirToList;
+            File dirToList;
 
-        if (list_args.length > 1) {
-            dirToList = list_args[1];
-        }
-        else {
-            dirToList = currentDir;
-        }
-
-        switch (list_args[0].toUpperCase()) {
-            case "F":
-                Set<String> listedFilenames = Stream.of(new File(dirToList).listFiles())
-                        .filter(file -> !file.isDirectory())
-                        .map(File::getName)
-                        .collect(Collectors.toSet());
-                status = STATUS_SUCCESS;
-                serverMsg = dirToList + "\n" + String.join("\n", listedFilenames);
-                linesToRead = listedFilenames.size() + 1;
-                break;
-            case "V":
-                Set<File> listedFiles = Stream.of(new File(dirToList).listFiles())
-                        .filter(file -> !file.isDirectory())
-                        .collect(Collectors.toSet());
-                status = STATUS_SUCCESS;
-                StringBuilder msg = new StringBuilder(dirToList + "\n");
-
-                for (File file : listedFiles) {
-                    msg.append(file.getName());
-                    msg.append(" ");
-                    msg.append("(size: ");
-                    msg.append(file.length());
-                    msg.append(" bytes)");
-                    msg.append("\n");
+            if (list_args.length > 1) {
+                if (Paths.get(list_args[1]).isAbsolute()) {
+                    dirToList = new File(list_args[1]);
+                }
+                else {
+                    dirToList = new File(rootDir, currentDir + File.separator + list_args[1]);
                 }
 
-                serverMsg = msg.toString();
-                linesToRead = listedFiles.size() + 1;
-                break;
-            default:
-                status = STATUS_ERROR;
-                serverMsg = "Specify a listing format. Please follow the command 'LIST' with 'F' (standard formatting) or 'V' (verbose formatting).";
-                break;
+            } else {
+                dirToList = new File(rootDir, currentDir);
+            }
+
+            switch (list_args[0].toUpperCase()) {
+                case "F":
+                    Set<String> listedFilenames = Stream.of(Objects.requireNonNull(dirToList.listFiles()))
+                            .filter(file -> !file.isDirectory())
+                            .map(File::getName)
+                            .collect(Collectors.toSet());
+                    status = STATUS_SUCCESS;
+                    serverMsg = dirToList + "\n" + String.join("\n", listedFilenames);
+                    linesToRead = listedFilenames.size() + 1;
+                    break;
+                case "V":
+                    DateFormat formatter =  new SimpleDateFormat("dd/MM/yyyy hh:mm:ss");
+                    Set<File> listedFiles = Stream.of(Objects.requireNonNull(dirToList.listFiles()))
+                            .filter(file -> !file.isDirectory())
+                            .collect(Collectors.toSet());
+                    status = STATUS_SUCCESS;
+                    StringBuilder msg = new StringBuilder(dirToList.getCanonicalPath());
+
+                    for (File file : listedFiles) {
+                        msg.append("\n");
+                        msg.append(file.getName());
+                        msg.append(" ");
+                        msg.append("(size: ");
+                        msg.append(file.length());
+                        msg.append(" bytes, last modified: ");
+                        msg.append(formatter.format(file.lastModified()));
+                        msg.append(")");
+                    }
+
+                    serverMsg = msg.toString();
+                    linesToRead = listedFiles.size() + 1;
+                    break;
+                default:
+                    status = STATUS_ERROR;
+                    serverMsg = "Specify a listing format. Please follow the command 'LIST' with 'F' (standard formatting) or 'V' (verbose formatting).";
+                    break;
+            }
+        }
+        else {
+            status = STATUS_ERROR;
+            serverMsg = "You are not logged in. Please log in using the USER command.";
         }
     }
 
-    public void CDIR() {
-        System.out.println("Current directory command");
-        status = STATUS_SUCCESS;
-        serverMsg = "Current directory command sent to server!";
+    public void CDIR(String new_dir) throws IOException {
+        if (isLoggedIn) {
+            String enteredDir;
+
+            if (Paths.get(new_dir).isAbsolute()) {
+                currentDir = "";
+                enteredDir = "";
+                rootDir = new File(new_dir);
+            }
+            else {
+                enteredDir = currentDir + new_dir;
+            }
+
+            File completePath = new File(rootDir, enteredDir);
+            if (completePath.exists()) {
+                //TODO: auth
+                currentDir += new_dir + File.separator;
+
+                status = STATUS_LOGGEDIN;
+                serverMsg = "Changed working directory to " + completePath.getCanonicalPath();
+            }
+            else {
+                status = STATUS_ERROR;
+                System.out.println("DIR STRING: " + completePath);
+                serverMsg = "Directory does not exist.";
+            }
+
+        }
+        else {
+            status = STATUS_ERROR;
+            serverMsg = "You are not logged in. Please log in using the USER command.";
+        }
     }
 
     public void KILL() {
-        System.out.println("Delete command");
-        status = STATUS_SUCCESS;
-        serverMsg = "Delete command sent to server!";
+        if (isLoggedIn) {
+
+        }
+        else {
+            status = STATUS_ERROR;
+            serverMsg = "You are not logged in. Please log in using the USER command.";
+        }
     }
 
     public void NAME() {
-        System.out.println("Rename command");
-        status = STATUS_SUCCESS;
-        serverMsg = "Rename command sent to server!";
+        if (isLoggedIn) {
+            System.out.println("Rename command");
+            status = STATUS_SUCCESS;
+            serverMsg = "Rename command sent to server!";
+        }
+        else {
+            status = STATUS_ERROR;
+            serverMsg = "You are not logged in. Please log in using the USER command.";
+        }
     }
 
     public void DONE() throws IOException {
@@ -337,15 +385,38 @@ public class ServerClientThread extends Thread {
     }
 
     public void RETR() {
-        System.out.println("Request command");
-        status = STATUS_SUCCESS;
-        serverMsg = "Request command sent to server!";
+        if (isLoggedIn) {
+            System.out.println("Request command");
+            status = STATUS_SUCCESS;
+            serverMsg = "Request command sent to server!";
+        }
+        else {
+            status = STATUS_ERROR;
+            serverMsg = "You are not logged in. Please log in using the USER command.";
+        }
     }
 
     public void STOR() {
-        System.out.println("Store command");
-        status = STATUS_SUCCESS;
-        serverMsg = "Store command sent to server!";
+        if (isLoggedIn) {
+            System.out.println("Store command");
+            status = STATUS_SUCCESS;
+            serverMsg = "Store command sent to server!";
+        }
+        else {
+            status = STATUS_ERROR;
+            serverMsg = "You are not logged in. Please log in using the USER command.";
+        }
+    }
+
+    public String[] getUserInfo() throws IOException {
+        BufferedReader br = new BufferedReader(new FileReader(LOGIN_DB));
+        String[] userInfo;
+
+        do {
+            userInfo = br.readLine().split(",");
+        } while (!userInfo[0].equals(userId));
+
+        return userInfo;
     }
 
 }
