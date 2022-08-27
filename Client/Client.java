@@ -54,7 +54,7 @@ public class Client {
     }
 
     public static void main(String[] args) throws IOException {
-        Client myClient = new Client();
-        myClient.start();
+        Client c = new Client();
+        c.start();
     }
 }

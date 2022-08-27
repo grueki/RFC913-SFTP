@@ -22,7 +22,7 @@ Although this implementation is designed to be cross-platform, and will work on 
 
 Once a client has connected to the server, commands can be sent and the server will respond accordingly.
 
-The user-id, their associated accounts and passwords are shown below. Please note that users 1-5 are used in the test script and the contents of their respective folders are not to be changed.
+The user-id, their associated accounts and passwords are shown below. Please note that users 1-5 are used in the TestClientServer script and the contents of their respective folders are not to be changed.
 
 User-id|Account|Password
 :---:|:---:|:---:
@@ -47,10 +47,10 @@ user6|acct1 acct2 acct3 acct4|pass6
 1. Ensure the server is running
 2. Open a new command prompt
 3. Change directory to the `RFC 913/Client` directory
-4. Execute the 'test' script with `./test.sh` to start the test script
-5. The client will execute the test cases shown below
+4. Execute the 'TestClientServer' script with `./TestClientServer.sh` to start the TestClientServer script
+5. The client will execute the TestClientServer cases shown below
 
-The output of the test script is shown below. Each command is tested thoroughly and has multiple test cases associated with it in order to ensure the command is working as intended.
+The output of the TestClientServer script is shown below. Each command is tested thoroughly and has multiple TestClientServer cases associated with it in order to ensure the command is working as intended.
 
 ~~~
 1. User-id valid

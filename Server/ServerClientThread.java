@@ -7,49 +7,47 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 
-class ServerClientThread extends Thread {
+public class ServerClientThread extends Thread {
+    BufferedReader inFromClient;
+    DataOutputStream outToClient;
     String STATUS_SUCCESS = "+";
     String STATUS_ERROR = "-";
     String STATUS_LOGGEDIN = "! ";
     String LOGIN_DB = "login.txt";
 
     Socket clientSocket;
-    int clientNumber;
     String status;
     String serverMsg;
     String userId;
     String userAcc;
     boolean isLoggedIn = false;
 
-    ServerClientThread(Socket inSocket, int count) throws IOException {
+    public ServerClientThread(Socket inSocket) throws IOException {
         clientSocket = inSocket;
-        clientNumber = count;
     }
 
     public void run() {
         try {
-            BufferedReader inFromClient = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-            DataOutputStream outToClient = new DataOutputStream(clientSocket.getOutputStream());
+            inFromClient = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            outToClient = new DataOutputStream(clientSocket.getOutputStream());
 
             InetAddress ip = InetAddress.getLocalHost();
             String hostname = ip.getHostName();
             outToClient.writeBytes("+" + hostname + " RFC-913 SFTP\n");
+            outToClient.flush();
 
-            loop(inFromClient, outToClient);
+            loop();
 
         } catch (Exception e) {
             e.printStackTrace();
         }
-        finally {
-            System.out.println("Client " + clientNumber + " has disconnected.");
-        }
     }
 
-    public void loop(BufferedReader inFromClient,
-                     DataOutputStream outToClient) throws IOException {
+    public void loop() throws IOException {
         String clientMsg;
         String[] clientCmd;
-        while((clientMsg = inFromClient.readLine()) != null) {
+
+        while ((clientMsg = inFromClient.readLine()) != null) {
             clientCmd = clientMsg.split("\\s+");
 
             try {
@@ -98,6 +96,7 @@ class ServerClientThread extends Thread {
                 serverMsg = "Valid command, but insufficient arguments given. Please try again.";
             }
             outToClient.writeBytes(status + serverMsg + "\n");
+            outToClient.flush();
         }
     }
 
@@ -250,6 +249,7 @@ class ServerClientThread extends Thread {
         status = STATUS_SUCCESS;
         serverMsg = "Connection closed.";
         outputStream.writeBytes(status + serverMsg + "\n");
+        outputStream.flush();
         clientSocket.close();
     }
 

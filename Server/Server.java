@@ -4,11 +4,10 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-class Server {
-    static String HOST_DOMAIN = "localhost";
+public class Server extends Thread{
     static int PORT_NUM = 3000;
 
-    public static void main(String[] args) throws IOException {
+    public void run() {
         try (ServerSocket serverSocket = new ServerSocket(PORT_NUM)) {
             System.out.println("Server listening on port " + PORT_NUM + "!");
 
@@ -16,10 +15,17 @@ class Server {
             while (true) {
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("Client number " + counter + " connected!");
-                ServerClientThread newClientThread = new ServerClientThread(clientSocket, counter);
+                ServerClientThread newClientThread = new ServerClientThread(clientSocket);
                 newClientThread.start();
                 counter++;
             }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
+    }
+
+    public static void main(String[] args) {
+        Server s = new Server();
+        s.start();
     }
 }
