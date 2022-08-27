@@ -1,22 +1,27 @@
 package Server;
 
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.List;
 
 class ServerClientThread extends Thread {
     String STATUS_SUCCESS = "+";
     String STATUS_ERROR = "-";
-    String STATUS_LOGGEDIN = "!";
+    String STATUS_LOGGEDIN = "! ";
+    String LOGIN_DB = "login.txt";
 
     Socket clientSocket;
     int clientNumber;
     String status;
     String serverMsg;
+    String userId;
+    String userAcc;
+    boolean isLoggedIn = false;
 
-    ServerClientThread(Socket inSocket, int count) {
+    ServerClientThread(Socket inSocket, int count) throws IOException {
         clientSocket = inSocket;
         clientNumber = count;
     }
@@ -36,44 +41,51 @@ class ServerClientThread extends Thread {
             while(true) {
                 clientMsg = inFromClient.readLine();
                 clientCmd = clientMsg.split("\\s+");
-                switch (clientCmd[0].toUpperCase()) {
-                    case "USER":
-                        USER();
-                        break;
-                    case "ACCT":
-                        ACCT();
-                        break;
-                    case "PASS":
-                        PASS();
-                        break;
-                    case "TYPE":
-                        TYPE();
-                        break;
-                    case "LIST":
-                        LIST();
-                        break;
-                    case "CDIR":
-                        CDIR();
-                        break;
-                    case "KILL":
-                        KILL();
-                        break;
-                    case "NAME":
-                        NAME();
-                        break;
-                    case "DONE":
-                        DONE();
-                        break;
-                    case "RETR":
-                        RETR();
-                        break;
-                    case "STOR":
-                        STOR();
-                        break;
-                    default:
-                        status = STATUS_ERROR;
-                        serverMsg = "Invalid command";
-                        break;
+
+                try {
+                    switch (clientCmd[0].toUpperCase()) {
+                        case "USER":
+                            USER(clientCmd[1]);
+                            break;
+                        case "ACCT":
+                            ACCT(clientCmd[1]);
+                            break;
+                        case "PASS":
+                            PASS();
+                            break;
+                        case "TYPE":
+                            TYPE();
+                            break;
+                        case "LIST":
+                            LIST();
+                            break;
+                        case "CDIR":
+                            CDIR();
+                            break;
+                        case "KILL":
+                            KILL();
+                            break;
+                        case "NAME":
+                            NAME();
+                            break;
+                        case "DONE":
+                            DONE();
+                            break;
+                        case "RETR":
+                            RETR();
+                            break;
+                        case "STOR":
+                            STOR();
+                            break;
+                        default:
+                            status = STATUS_ERROR;
+                            serverMsg = "Invalid command";
+                            break;
+                    }
+                } catch (IndexOutOfBoundsException e) {
+                    e.printStackTrace();
+                    status = STATUS_ERROR;
+                    serverMsg = "Valid command, but insufficient arguments given. Please try again.";
                 }
                 outToClient.writeBytes(status + serverMsg + "\n");
             }
@@ -90,16 +102,75 @@ class ServerClientThread extends Thread {
         }
     }
 
-    public void USER() {
-        System.out.println("User command");
-        status = STATUS_SUCCESS;
-        serverMsg = "User command sent to server!";
+    public void USER(String user_input) throws IOException {
+        List<String> users = Files.readAllLines(Paths.get(LOGIN_DB));
+        boolean foundUser = false;
+
+        String[] userInfo = new String[0];
+
+        for (String user : users) {
+            userInfo = user.split(",");
+            if (user_input.equals(userInfo[0])) {
+                foundUser = true;
+                userId = userInfo[0];
+                break;
+            }
+        }
+
+        if (foundUser) {
+            if (userInfo.length < 2) {
+                status = STATUS_LOGGEDIN;
+                isLoggedIn = true;
+                serverMsg = "Logged in as " + userId;
+            }
+            else {
+                status = STATUS_SUCCESS;
+                serverMsg = "User-id valid, send account and/or password.";
+            }
+        }
+        else {
+            status = STATUS_ERROR;
+            serverMsg = user_input + " is not a valid user-id. Please try again.";
+        }
     }
 
-    public void ACCT() {
-        System.out.println("Account command");
-        status = STATUS_SUCCESS;
-        serverMsg = "Account command sent to server!";
+    public void ACCT(String acc_input) throws IOException {
+        BufferedReader br = new BufferedReader(new FileReader(LOGIN_DB));
+        String[] userInfo;
+
+        do {
+            userInfo = br.readLine().split(",");
+        } while (!userInfo[0].equals(userId));
+
+        boolean foundAcc = false;
+
+        if (userInfo.length > 1) {
+            for (String account : userInfo[1].split("\\|")) {
+                if (acc_input.equals(account)) {
+                    foundAcc = true;
+                    userAcc = account;
+                    break;
+                }
+            }
+
+            if (foundAcc || userInfo[1].equals("")) {
+                if (userInfo.length < 3) {
+                    status = STATUS_LOGGEDIN;
+                    isLoggedIn = true;
+                    serverMsg = "Account valid (or not needed), logged in.";
+                } else {
+                    status = STATUS_SUCCESS;
+                    serverMsg = "Account valid (or not needed), send password.";
+                }
+            } else {
+                status = STATUS_ERROR;
+                serverMsg = "Invalid account, try again.";
+            }
+        }
+        else {
+            status = STATUS_ERROR;
+            serverMsg = "Already logged in. No accounts associated with this user.";
+        }
     }
 
     public void PASS() {

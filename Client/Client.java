@@ -32,7 +32,7 @@ public class Client {
             System.out.print("Enter command: ");
             message = inFromUser.readLine();
             response = sendMessage(message);
-            System.out.println("FROM SERVER: " + response);
+            System.out.println(response);
         }
     }
 
