@@ -28,11 +28,15 @@ public class Client {
 
         System.out.println(inFromServer.readLine());
 
-        while (inFromUser != null) {
+        while (true) {
             System.out.print("Enter command: ");
             message = inFromUser.readLine();
             response = sendMessage(message);
             System.out.println(response);
+
+            if (message.equalsIgnoreCase("DONE")){
+                break;
+            }
         }
     }
 

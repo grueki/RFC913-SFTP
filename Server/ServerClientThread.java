@@ -31,74 +31,73 @@ class ServerClientThread extends Thread {
             BufferedReader inFromClient = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             DataOutputStream outToClient = new DataOutputStream(clientSocket.getOutputStream());
 
-            String clientMsg = "";
-            String[] clientCmd;
-
             InetAddress ip = InetAddress.getLocalHost();
             String hostname = ip.getHostName();
             outToClient.writeBytes("+" + hostname + " RFC-913 SFTP\n");
 
-            while(true) {
-                clientMsg = inFromClient.readLine();
-                clientCmd = clientMsg.split("\\s+");
-
-                try {
-                    switch (clientCmd[0].toUpperCase()) {
-                        case "USER":
-                            USER(clientCmd[1]);
-                            break;
-                        case "ACCT":
-                            ACCT(clientCmd[1]);
-                            break;
-                        case "PASS":
-                            PASS();
-                            break;
-                        case "TYPE":
-                            TYPE();
-                            break;
-                        case "LIST":
-                            LIST();
-                            break;
-                        case "CDIR":
-                            CDIR();
-                            break;
-                        case "KILL":
-                            KILL();
-                            break;
-                        case "NAME":
-                            NAME();
-                            break;
-                        case "DONE":
-                            DONE();
-                            break;
-                        case "RETR":
-                            RETR();
-                            break;
-                        case "STOR":
-                            STOR();
-                            break;
-                        default:
-                            status = STATUS_ERROR;
-                            serverMsg = "Invalid command";
-                            break;
-                    }
-                } catch (IndexOutOfBoundsException e) {
-                    e.printStackTrace();
-                    status = STATUS_ERROR;
-                    serverMsg = "Valid command, but insufficient arguments given. Please try again.";
-                }
-                outToClient.writeBytes(status + serverMsg + "\n");
-            }
-
-//            inFromClient.close();
-//            outToClient.close();
-//            clientSocket.close();
+            loop(inFromClient, outToClient);
 
         } catch (Exception e) {
             e.printStackTrace();
         }
         finally {
             System.out.println("Client " + clientNumber + " has disconnected.");
+        }
+    }
+
+    public void loop(BufferedReader inFromClient,
+                     DataOutputStream outToClient) throws IOException {
+        String clientMsg;
+        String[] clientCmd;
+        while((clientMsg = inFromClient.readLine()) != null) {
+            clientCmd = clientMsg.split("\\s+");
+
+            try {
+                switch (clientCmd[0].toUpperCase()) {
+                    case "USER":
+                        USER(clientCmd[1]);
+                        break;
+                    case "ACCT":
+                        ACCT(clientCmd[1]);
+                        break;
+                    case "PASS":
+                        PASS();
+                        break;
+                    case "TYPE":
+                        TYPE();
+                        break;
+                    case "LIST":
+                        LIST();
+                        break;
+                    case "CDIR":
+                        CDIR();
+                        break;
+                    case "KILL":
+                        KILL();
+                        break;
+                    case "NAME":
+                        NAME();
+                        break;
+                    case "DONE":
+                        DONE(outToClient);
+                        return;
+                    case "RETR":
+                        RETR();
+                        break;
+                    case "STOR":
+                        STOR();
+                        break;
+                    default:
+                        status = STATUS_ERROR;
+                        serverMsg = "Invalid command";
+                        break;
+                }
+            } catch (IndexOutOfBoundsException e) {
+                e.printStackTrace();
+                status = STATUS_ERROR;
+                serverMsg = "Valid command, but insufficient arguments given. Please try again.";
+            }
+            outToClient.writeBytes(status + serverMsg + "\n");
         }
     }
 
@@ -209,10 +208,12 @@ class ServerClientThread extends Thread {
         serverMsg = "Rename command sent to server!";
     }
 
-    public void DONE() {
+    public void DONE(DataOutputStream outputStream) throws IOException {
         System.out.println("Done command");
         status = STATUS_SUCCESS;
-        serverMsg = "Done command sent to server!";
+        serverMsg = "Connection closed.";
+        outputStream.writeBytes(status + serverMsg + "\n");
+        clientSocket.close();
     }
 
     public void RETR() {
