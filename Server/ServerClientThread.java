@@ -20,6 +20,7 @@ public class ServerClientThread extends Thread {
     String serverMsg;
     String userId;
     String userAcc;
+    String transmissionType = "B";
     boolean isLoggedIn = false;
 
     public ServerClientThread(Socket inSocket) throws IOException {
@@ -62,7 +63,7 @@ public class ServerClientThread extends Thread {
                         PASS(clientCmd[1]);
                         break;
                     case "TYPE":
-                        TYPE();
+                        TYPE(clientCmd[1]);
                         break;
                     case "LIST":
                         LIST();
@@ -206,7 +207,7 @@ public class ServerClientThread extends Thread {
         else {
             status = STATUS_ERROR;
             if (isLoggedIn) {
-                serverMsg = "Already logged in";
+                serverMsg = "Already logged in.";
             }
             else {
                 serverMsg = "No passwords associated with this user. Please send account.";
@@ -214,10 +215,34 @@ public class ServerClientThread extends Thread {
         }
     }
 
-    public void TYPE() {
-        System.out.println("Type command");
-        status = STATUS_SUCCESS;
-        serverMsg = "Type command sent to server!";
+    public void TYPE(String type_mapping) {
+        if (isLoggedIn) {
+            switch (type_mapping.toUpperCase()) {
+                case "A":
+                    transmissionType = type_mapping.toUpperCase();
+                    status = STATUS_SUCCESS;
+                    serverMsg = "Using ASCII mode.";
+                    break;
+                case "B":
+                    transmissionType = "B";
+                    status = STATUS_SUCCESS;
+                    serverMsg = "Using binary mode.";
+                    break;
+                case "C":
+                    transmissionType = "C";
+                    status = STATUS_SUCCESS;
+                    serverMsg = "Using continuous mode.";
+                    break;
+                default:
+                    status = STATUS_ERROR;
+                    serverMsg = "Invalid type. Please follow the command 'TYPE' with 'A' (ASCII), 'B' (Byte) or 'C' (Continuous) to select transmission mode.";
+                    break;
+            }
+        }
+        else {
+            status = STATUS_ERROR;
+            serverMsg = "You are not logged in. Please log in using the USER command.";
+        }
     }
 
     public void LIST() {
@@ -246,7 +271,6 @@ public class ServerClientThread extends Thread {
 
     public void DONE(BufferedReader inputStream,
                      DataOutputStream outputStream) throws IOException {
-        System.out.println("Done command");
         status = STATUS_SUCCESS;
         serverMsg = "Connection closed.";
         outputStream.writeBytes(status + serverMsg + "\n");

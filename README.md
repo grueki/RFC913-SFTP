@@ -1,75 +1,66 @@
 # RFC 913
+Author: Isabelle Johns
 
 ## Setup
 
-Although this implementation is designed to be cross-platform, and will work on any machine, the associated scripts are designed to be run on a linux system.
+This implemetation has been designed to run on a Linux system. 
+The Server hosts each Client on a different thread, allowing it to serve multiple clients at once.
 
 **Server Setup**
 
 1. Open a new command prompt
 2. Change directory to the `RFC 913/Server` directory
-3. (First time only) Execute the following command to give `run.sh` permission: `chmod +x ./run.sh`
+3. (First time only) Execute the following command to give `./run.sh` permission: `chmod +x ./run.sh`
 4. Execute the 'run' script with `./run.sh` to start the server
-5. A message will be displayed stating that the server was successfully started
 
 **Client Setup**
 
 1. Open a new command prompt
 2. Change directory to the `RFC 913/Client` directory 
-3. (First time only) Execute the following command to give `run.sh` permission: `chmod +x ./run.sh`
+3. (First time only) Execute the following command to give `./run.sh` permission: `chmod +x ./run.sh`
 4. Execute the 'run' script with `./run.sh` to start the client
-5. A message will be displayed stating that the client successfully connected to the server followed by a greeting from the server
 
-Once a client has connected to the server, commands can be sent and the server will respond accordingly.
+The login information can be found below. These logins are informed by the `/Server/login.txt` file.
 
-The user-id, their associated accounts and passwords are shown below. Please note that users 1-5 are used in the TestClientServer script and the contents of their respective folders are not to be changed.
-
-User-id|Account|Password
-:---:|:---:|:---:
-user1| |
-user2|acct1|
-user3| |pass3
-user4|acct1|pass4
-user5|acct1 acct2 acct3|pass5
-user6|acct1 acct2 acct3 acct4|pass6
-
-## Features
-
-- Every command from the RFC 913 command has been successfully implemented and thoroughly tested
-- The server fully supports multithreaded socket connections, each client connection will run on a unique thread
-- Each user is assigned a unique folder on the server which they are locked to
-- Relative and absolute filepaths are supported, the user's folder is translated as the root directory
+| User-id         | Account             | Password |
+|-----------------|---------------------|----------|
+| user_only       |                     |          |
+| user_w_pwd      |                     | pass1    |
+| user_w_acc      | acc1,               |          |
+| user_w_both     | acc2                | pass2    |
+| multi_acc       | acc1 acc2 acc3      |          |
+| multi_acc_w_pwd | acc1 acc2 acc3 acc4 | pass3    |
 
 ## Testing
 
-**Testing Setup**
+Once both the Client and the Server are running in separate terminals, they can be tested. 
+The following describes an exhaustive list of test cases for the RFC-913 protocol.
 
-1. Ensure the server is running
-2. Open a new command prompt
-3. Change directory to the `RFC 913/Client` directory
-4. Execute the 'TestClientServer' script with `./TestClientServer.sh` to start the TestClientServer script
-5. The client will execute the TestClientServer cases shown below
 
-The output of the TestClientServer script is shown below. Each command is tested thoroughly and has multiple TestClientServer cases associated with it in order to ensure the command is working as intended.
-
+**1. User ID with no password/accound**
 ~~~
-1. User-id valid
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> done
-+Closing connection
++[hostname] RFC-913 SFTP
+Enter command: USER user_only
+! Logged in as user_only
+Enter command: DONE
++Connection closed.
+~~~
 
-2. User-id valid, account required
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user2
-+User-id valid, send account and password
-> acct acct1
-!Account valid, logged-in
-> done
-+Closing connection
+**2. User ID with no password/account, attempted sign in with account and password** 
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_only
+! Logged in as user_only
+Enter command: PASS somePassword
+-Already logged in
+Enter command: ACCT someAcct
+-Already logged in. No accounts associated with this user.
+Enter command: DONE
++Connection closed.
+~~~
+
+
+
 
 3. User-id valid, password required
 Successfully connected to localhost on port 6789
@@ -679,4 +670,3 @@ ERROR: Invalid Command
 Available Commands: "USER", "ACCT", "PASS", "TYPE", "LIST", "CDIR", "KILL", "NAME", "TOBE", "DONE", "RETR", "SEND", "STOP", "STOR", "SIZE"
 > done
 +Closing connection
-~~~
