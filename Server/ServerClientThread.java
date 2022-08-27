@@ -30,6 +30,8 @@ public class ServerClientThread extends Thread {
     String transmissionType = "B";
     File rootDir = new File(System.getProperty("user.dir"));
     String currentDir = "";
+    File fileToRename;
+    boolean renameReady = false;
     boolean isLoggedIn = false;
     int linesToRead = 1;
 
@@ -95,7 +97,7 @@ public class ServerClientThread extends Thread {
                         KILL(clientCmd[1]);
                         break;
                     case "NAME":
-                        NAME();
+                        NAME(clientCmd[1]);
                         break;
                     case "DONE":
                         DONE();
@@ -106,6 +108,11 @@ public class ServerClientThread extends Thread {
                     case "STOR":
                         STOR();
                         break;
+                    case "TOBE":
+                        if (renameReady) {
+                            TOBE(clientCmd[1]);
+                            break;
+                        }
                     default:
                         status = STATUS_ERROR;
                         serverMsg = "Invalid command";
@@ -154,7 +161,6 @@ public class ServerClientThread extends Thread {
     }
 
     public void ACCT(String acc_input) throws IOException {
-        BufferedReader br = new BufferedReader(new FileReader(LOGIN_DB));
         String[] userInfo = getUserInfo();
 
         boolean foundAcc = false;
@@ -189,7 +195,6 @@ public class ServerClientThread extends Thread {
     }
 
     public void PASS(String pass_input) throws IOException {
-        BufferedReader br = new BufferedReader(new FileReader(LOGIN_DB));
         String[] userInfo = getUserInfo();
 
         boolean passwordSatisfied = false;
@@ -362,7 +367,6 @@ public class ServerClientThread extends Thread {
             else {
                 fileToDelete = new File(rootDir, currentDir + File.separator + file_spec);
             }
-            System.out.println("FILE TO DELETE: " + fileToDelete);
 
             if(fileToDelete.exists()) {
                 boolean gotDeleted = fileToDelete.delete();
@@ -387,11 +391,54 @@ public class ServerClientThread extends Thread {
         }
     }
 
-    public void NAME() {
+    public void NAME(String file_spec) {
         if (isLoggedIn) {
-            System.out.println("Rename command");
-            status = STATUS_SUCCESS;
-            serverMsg = "Rename command sent to server!";
+            File fullPath;
+            if (Paths.get(file_spec).isAbsolute()) {
+                fullPath = new File(file_spec);
+            }
+            else {
+                fullPath = new File(rootDir, currentDir + File.separator + file_spec);
+            }
+
+            if(fullPath.exists()) {
+                fileToRename = fullPath;
+                status = STATUS_SUCCESS;
+                serverMsg = file_spec + "File exists. Use the TOBE command next to rename " + file_spec;
+                renameReady = true;
+            }
+            else {
+                status = STATUS_ERROR;
+                serverMsg = "Can't find file " + file_spec;
+            }
+
+        }
+        else {
+            status = STATUS_ERROR;
+            serverMsg = "You are not logged in. Please log in using the USER command.";
+        }
+    }
+
+    public void TOBE(String new_name) {
+        if (isLoggedIn) {
+            if (renameReady) {
+                File fullPath;
+                if (Paths.get(new_name).isAbsolute()) {
+                    fullPath = new File(new_name);
+                } else {
+                    fullPath = new File(rootDir, currentDir + File.separator + new_name);
+                }
+                boolean gotRenamed = fileToRename.renameTo(fullPath);
+
+                if (gotRenamed) {
+                    status = STATUS_SUCCESS;
+                    serverMsg = fileToRename + " got renamed to " + new_name;
+                    renameReady = false;
+                } else {
+                    status = STATUS_ERROR;
+                    serverMsg = "File didn't get renamed.";
+                }
+            }
         }
         else {
             status = STATUS_ERROR;
