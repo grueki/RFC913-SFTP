@@ -92,7 +92,7 @@ public class ServerClientThread extends Thread {
                         CDIR(clientCmd[1]);
                         break;
                     case "KILL":
-                        KILL();
+                        KILL(clientCmd[1]);
                         break;
                     case "NAME":
                         NAME();
@@ -353,9 +353,33 @@ public class ServerClientThread extends Thread {
         }
     }
 
-    public void KILL() {
+    public void KILL(String file_spec) {
         if (isLoggedIn) {
+            File fileToDelete;
+            if (Paths.get(file_spec).isAbsolute()) {
+                fileToDelete = new File(file_spec);
+            }
+            else {
+                fileToDelete = new File(rootDir, currentDir + File.separator + file_spec);
+            }
+            System.out.println("FILE TO DELETE: " + fileToDelete);
 
+            if(fileToDelete.exists()) {
+                boolean gotDeleted = fileToDelete.delete();
+
+                if (gotDeleted) {
+                    status = STATUS_SUCCESS;
+                    serverMsg = file_spec + " deleted";
+                }
+                else {
+                    status = STATUS_ERROR;
+                    serverMsg = "File not deleted";
+                }
+            }
+            else {
+                status = STATUS_ERROR;
+                serverMsg = "File not deleted because it doesn't exist.";
+            }
         }
         else {
             status = STATUS_ERROR;
