@@ -31,8 +31,8 @@ public class Client {
         while (true) {
             System.out.print("Enter command: ");
             message = inFromUser.readLine();
-            response = sendMessage(message);
-            System.out.println(response);
+            sendMessage(message);
+//            System.out.println(response);
 
             if (message.equalsIgnoreCase("DONE")){
                 break;
@@ -40,9 +40,17 @@ public class Client {
         }
     }
 
-    public String sendMessage(String msg) throws IOException {
+    public void sendMessage(String msg) throws IOException {
         outToServer.writeBytes(msg + "\n");
-        return inFromServer.readLine();
+        String response = inFromServer.readLine();
+        try {
+            int numLines = Integer.parseInt(response);
+            for (int i = 0; i < numLines; i++) {
+                System.out.println(inFromServer.readLine());
+            }
+        } catch (NumberFormatException e) {
+            System.out.println(response);
+        }
     }
 
     public void stop() throws IOException {

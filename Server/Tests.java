@@ -1,14 +1,14 @@
 package Server;
 
-import java.io.*;
-import java.net.ServerSocket;
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.Socket;
-import java.util.Scanner;
 
 public class Tests {
     static String HOST_DOMAIN = "localhost";
     static int PORT_NUM = 3000;
-    static Server testServer;
     static Socket testClientSocket;
 
     String message;
@@ -23,6 +23,8 @@ public class Tests {
         System.out.println("Beginning tests");
         System.out.println("-----------------------------------");
         tests.USER_userOnly();
+        outToServer.close();
+        inFromServer.close();
     }
 
     public void newTestClient() throws IOException {
@@ -30,9 +32,6 @@ public class Tests {
 
         outToServer = new DataOutputStream(testClientSocket.getOutputStream());
         inFromServer = new BufferedReader(new InputStreamReader(testClientSocket.getInputStream()));
-
-        ServerClientThread testServerClientThread = new ServerClientThread(testClientSocket);
-        testServerClientThread.start();
 
         System.out.println(inFromServer.readLine());
     }
@@ -49,9 +48,8 @@ public class Tests {
 
         response = sendMessage(message);
 
-        System.out.println(response);
-        boolean passes = response.contains("Logged in as user_only");
-        System.out.println(passes);
+        System.out.println(response.contains("Logged in as user_only"));
+
     }
 
 }

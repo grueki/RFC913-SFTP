@@ -6,9 +6,11 @@ import java.net.Socket;
 
 public class Server extends Thread{
     static int PORT_NUM = 3000;
+    public static ServerSocket serverSocket;
 
     public void run() {
-        try (ServerSocket serverSocket = new ServerSocket(PORT_NUM)) {
+        try {
+            serverSocket = new ServerSocket(PORT_NUM);
             System.out.println("Server listening on port " + PORT_NUM + "!");
 
             int counter = 1;
@@ -20,12 +22,21 @@ public class Server extends Thread{
                 counter++;
             }
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            System.out.println("Connection closed.");
         }
+
     }
 
     public static void main(String[] args) {
         Server s = new Server();
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                serverSocket.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }));
         s.start();
+
     }
 }

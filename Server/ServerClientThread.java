@@ -6,7 +6,6 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -19,13 +18,16 @@ public class ServerClientThread extends Thread {
     String STATUS_LOGGEDIN = "! ";
     String LOGIN_DB = "login.txt";
 
+
     Socket clientSocket;
     String status;
     String serverMsg;
     String userId;
     String userAcc;
     String transmissionType = "B";
+    String currentDir = System.getProperty("user.dir");
     boolean isLoggedIn = false;
+    int linesToRead = 1;
 
     public ServerClientThread(Socket inSocket) throws IOException {
         clientSocket = inSocket;
@@ -33,13 +35,23 @@ public class ServerClientThread extends Thread {
 
     public void run() {
         try {
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                try {
+                    inFromClient.close();
+                    outToClient.close();
+                    clientSocket.close();
+                    this.interrupt();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }));
+
             inFromClient = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             outToClient = new DataOutputStream(clientSocket.getOutputStream());
 
             InetAddress ip = InetAddress.getLocalHost();
             String hostname = ip.getHostName();
             outToClient.writeBytes("+" + hostname + " RFC-913 SFTP\n");
-            outToClient.flush();
 
             loop();
 
@@ -82,7 +94,7 @@ public class ServerClientThread extends Thread {
                         NAME();
                         break;
                     case "DONE":
-                        DONE(inFromClient, outToClient);
+                        DONE();
                         return;
                     case "RETR":
                         RETR();
@@ -99,8 +111,9 @@ public class ServerClientThread extends Thread {
                 status = STATUS_ERROR;
                 serverMsg = "Valid command, but insufficient arguments given. Please try again.";
             }
-            String response = status + serverMsg + "\n";
+            String response = linesToRead + "\n" + status + serverMsg + "\n";
             outToClient.writeBytes(response);
+            linesToRead = 1;
         }
     }
 
@@ -257,27 +270,37 @@ public class ServerClientThread extends Thread {
             dirToList = list_args[1];
         }
         else {
-            dirToList = System.getProperty("user.dir") + File.separator + "..";
+            dirToList = currentDir;
         }
-        Set<String> listedfiles;
 
         switch (list_args[0].toUpperCase()) {
             case "F":
-                listedfiles = Stream.of(new File(dirToList).listFiles())
+                Set<String> listedFilenames = Stream.of(new File(dirToList).listFiles())
                         .filter(file -> !file.isDirectory())
                         .map(File::getName)
                         .collect(Collectors.toSet());
                 status = STATUS_SUCCESS;
-                serverMsg = String.join(" ", listedfiles);
+                serverMsg = dirToList + "\n" + String.join("\n", listedFilenames);
+                linesToRead = listedFilenames.size() + 1;
                 break;
             case "V":
-                // TODO: make verbose
-                listedfiles = Stream.of(new File(dirToList).listFiles())
+                Set<File> listedFiles = Stream.of(new File(dirToList).listFiles())
                         .filter(file -> !file.isDirectory())
-                        .map(File::getName)
                         .collect(Collectors.toSet());
                 status = STATUS_SUCCESS;
-                serverMsg = String.join(" ", listedfiles);
+                StringBuilder msg = new StringBuilder(dirToList + "\n");
+
+                for (File file : listedFiles) {
+                    msg.append(file.getName());
+                    msg.append(" ");
+                    msg.append("(size: ");
+                    msg.append(file.length());
+                    msg.append(" bytes)");
+                    msg.append("\n");
+                }
+
+                serverMsg = msg.toString();
+                linesToRead = listedFiles.size() + 1;
                 break;
             default:
                 status = STATUS_ERROR;
@@ -304,13 +327,12 @@ public class ServerClientThread extends Thread {
         serverMsg = "Rename command sent to server!";
     }
 
-    public void DONE(BufferedReader inputStream,
-                     DataOutputStream outputStream) throws IOException {
+    public void DONE() throws IOException {
         status = STATUS_SUCCESS;
         serverMsg = "Connection closed.";
-        outputStream.writeBytes(status + serverMsg + "\n");
-        inputStream.close();
-        outputStream.close();
+        outToClient.writeBytes(status + serverMsg + "\n");
+        inFromClient.close();
+        outToClient.close();
         clientSocket.close();
     }
 
