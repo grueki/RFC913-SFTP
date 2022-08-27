@@ -33,9 +33,11 @@ The login information can be found below. These logins are informed by the `/Ser
 
 ## Testing
 
-Once both the Client and the Server are running in separate terminals, they can be tested. 
-The following describes an exhaustive list of test cases for the RFC-913 protocol.
-
+To test, follow the steps as described in **Server Setup** to run the server. The testing script can then be run:
+1. Open a new command prompt
+2. Change directory to the `RFC 913/Server` directory (if not already in that directory)
+3. (First time only) Execute the following command to give `./test.sh` permission: `chmod +x ./test.sh`
+4. Execute the 'test' script with `./test.sh` to start the testing client
 
 **1. User ID with no password/accound**
 ~~~

@@ -6,6 +6,10 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ServerClientThread extends Thread {
     BufferedReader inFromClient;
@@ -66,7 +70,7 @@ public class ServerClientThread extends Thread {
                         TYPE(clientCmd[1]);
                         break;
                     case "LIST":
-                        LIST();
+                        LIST(clientCmd[1]);
                         break;
                     case "CDIR":
                         CDIR();
@@ -91,8 +95,7 @@ public class ServerClientThread extends Thread {
                         serverMsg = "Invalid command";
                         break;
                 }
-            } catch (IndexOutOfBoundsException e) {
-                e.printStackTrace();
+            } catch (ArrayIndexOutOfBoundsException e) {
                 status = STATUS_ERROR;
                 serverMsg = "Valid command, but insufficient arguments given. Please try again.";
             }
@@ -215,11 +218,11 @@ public class ServerClientThread extends Thread {
         }
     }
 
-    public void TYPE(String type_mapping) {
+    public void TYPE(String mode) {
         if (isLoggedIn) {
-            switch (type_mapping.toUpperCase()) {
+            switch (mode.toUpperCase()) {
                 case "A":
-                    transmissionType = type_mapping.toUpperCase();
+                    transmissionType = mode.toUpperCase();
                     status = STATUS_SUCCESS;
                     serverMsg = "Using ASCII mode.";
                     break;
@@ -245,10 +248,42 @@ public class ServerClientThread extends Thread {
         }
     }
 
-    public void LIST() {
-        System.out.println("List command");
-        status = STATUS_SUCCESS;
-        serverMsg = "List command sent to server!";
+    public void LIST(String list_cmd) {
+        String[] list_args = list_cmd.split("\\s+");
+
+        String dirToList;
+
+        if (list_args.length > 1) {
+            dirToList = list_args[1];
+        }
+        else {
+            dirToList = System.getProperty("user.dir") + File.separator + "..";
+        }
+        Set<String> listedfiles;
+
+        switch (list_args[0].toUpperCase()) {
+            case "F":
+                listedfiles = Stream.of(new File(dirToList).listFiles())
+                        .filter(file -> !file.isDirectory())
+                        .map(File::getName)
+                        .collect(Collectors.toSet());
+                status = STATUS_SUCCESS;
+                serverMsg = String.join(" ", listedfiles);
+                break;
+            case "V":
+                // TODO: make verbose
+                listedfiles = Stream.of(new File(dirToList).listFiles())
+                        .filter(file -> !file.isDirectory())
+                        .map(File::getName)
+                        .collect(Collectors.toSet());
+                status = STATUS_SUCCESS;
+                serverMsg = String.join(" ", listedfiles);
+                break;
+            default:
+                status = STATUS_ERROR;
+                serverMsg = "Specify a listing format. Please follow the command 'LIST' with 'F' (standard formatting) or 'V' (verbose formatting).";
+                break;
+        }
     }
 
     public void CDIR() {
