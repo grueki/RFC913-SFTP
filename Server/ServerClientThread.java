@@ -61,7 +61,7 @@ class ServerClientThread extends Thread {
                         ACCT(clientCmd[1]);
                         break;
                     case "PASS":
-                        PASS();
+                        PASS(clientCmd[1]);
                         break;
                     case "TYPE":
                         TYPE();
@@ -172,10 +172,47 @@ class ServerClientThread extends Thread {
         }
     }
 
-    public void PASS() {
-        System.out.println("Password command");
-        status = STATUS_SUCCESS;
-        serverMsg = "Password command sent to server!";
+    public void PASS(String pass_input) throws IOException {
+        BufferedReader br = new BufferedReader(new FileReader(LOGIN_DB));
+        String[] userInfo;
+
+        do {
+            userInfo = br.readLine().split(",");
+        } while (!userInfo[0].equals(userId));
+
+        boolean passwordSatisfied = false;
+
+        if (userInfo.length > 2) {
+            for (String password : userInfo[2].split("\\|")) {
+                if (pass_input.equals(password)) {
+                    passwordSatisfied = true;
+                    break;
+                }
+            }
+
+            if (passwordSatisfied) {
+                if (userInfo[1].equals("") || userAcc != null) {
+                    status = STATUS_LOGGEDIN;
+                    isLoggedIn = true;
+                    serverMsg = "Password is correct (or not needed), logged in.";
+                } else {
+                    status = STATUS_SUCCESS;
+                    serverMsg = "Password valid (or not needed), send account.";
+                }
+            } else {
+                status = STATUS_ERROR;
+                serverMsg = "Wrong password, try again.";
+            }
+        }
+        else {
+            status = STATUS_ERROR;
+            if (isLoggedIn) {
+                serverMsg = "Already logged in";
+            }
+            else {
+                serverMsg = "No passwords associated with this user. Please send account.";
+            }
+        }
     }
 
     public void TYPE() {
