@@ -1,11 +1,9 @@
 package Server;
 
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Scanner;
 
 public class Tests {
     static String HOST_DOMAIN = "localhost";
@@ -13,8 +11,12 @@ public class Tests {
     static Server testServer;
     static Socket testClientSocket;
 
-    DataOutputStream outToServer;
-    BufferedReader inFromServer;
+    String message;
+    String response;
+
+    static DataOutputStream outToServer;
+    static BufferedReader inFromServer;
+    static BufferedReader inFromUser;
 
     public static void main(String[] args) throws IOException {
         Tests tests = new Tests();
@@ -24,12 +26,17 @@ public class Tests {
 
         System.out.println("Beginning tests");
         System.out.println("-----------------------------------");
-        tests.runUserTests();
+        tests.USER_userOnly();
+
+        outToServer.close();
+        inFromServer.close();
+        inFromUser.close();
     }
 
     public void newTestClient() throws IOException {
         testClientSocket = new Socket(HOST_DOMAIN, PORT_NUM);
 
+        inFromUser = new BufferedReader(new InputStreamReader(System.in));
         outToServer = new DataOutputStream(testClientSocket.getOutputStream());
         inFromServer = new BufferedReader(new InputStreamReader(testClientSocket.getInputStream()));
 
@@ -44,14 +51,16 @@ public class Tests {
         return inFromServer.readLine();
     }
 
-    public void runUserTests() throws IOException {
-        USER_userOnly();
-    }
-
     public void USER_userOnly() throws IOException {
         newTestClient();
-        String message = "USER user_only";
-        String response = sendMessage(message);
+
+        System.setIn(new ByteArrayInputStream("USER user_only".getBytes()));
+        Scanner sc = new Scanner(System.in);
+
+        message = sc.nextLine();
+
+        response = sendMessage(message);
+
         System.out.println(response);
         boolean passes = response.contains("Logged in as user_only");
         System.out.println(passes);

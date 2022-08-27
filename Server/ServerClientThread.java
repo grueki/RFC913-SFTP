@@ -77,7 +77,7 @@ public class ServerClientThread extends Thread {
                         NAME();
                         break;
                     case "DONE":
-                        DONE(outToClient);
+                        DONE(inFromClient, outToClient);
                         return;
                     case "RETR":
                         RETR();
@@ -95,8 +95,8 @@ public class ServerClientThread extends Thread {
                 status = STATUS_ERROR;
                 serverMsg = "Valid command, but insufficient arguments given. Please try again.";
             }
-            outToClient.writeBytes(status + serverMsg + "\n");
-            outToClient.flush();
+            String response = status + serverMsg + "\n";
+            outToClient.writeBytes(response);
         }
     }
 
@@ -244,12 +244,14 @@ public class ServerClientThread extends Thread {
         serverMsg = "Rename command sent to server!";
     }
 
-    public void DONE(DataOutputStream outputStream) throws IOException {
+    public void DONE(BufferedReader inputStream,
+                     DataOutputStream outputStream) throws IOException {
         System.out.println("Done command");
         status = STATUS_SUCCESS;
         serverMsg = "Connection closed.";
         outputStream.writeBytes(status + serverMsg + "\n");
-        outputStream.flush();
+        inputStream.close();
+        outputStream.close();
         clientSocket.close();
     }
 
