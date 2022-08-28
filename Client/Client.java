@@ -1,5 +1,6 @@
 package Client;
 
+import java.awt.*;
 import java.io.*;
 import java.net.Socket;
 
@@ -17,7 +18,6 @@ public class Client {
 
     public void start() throws IOException {
         String message;
-        String response;
 
         clientSocket = new Socket(HOST_DOMAIN, PORT_NUM);
         inFromUser = new BufferedReader(new InputStreamReader(System.in));
@@ -29,34 +29,18 @@ public class Client {
         do {
             System.out.print("Enter command: ");
             message = inFromUser.readLine();
+
+            outToServer.writeBytes(message + "\n");
+
             if (message.equalsIgnoreCase("SEND") && recieveReady) {
-                System.out.println("ENTERED");
                 receiveFile(message);
             }
-            sendMessage(message);
+            recieveMsg();
 
         } while (!message.equalsIgnoreCase("DONE"));
     }
 
-    public void sendMessage(String msg) throws IOException {
-        outToServer.writeBytes(msg + "\n");
-        String response = inFromServer.readLine();
-        try {
-            int numLines = Integer.parseInt(response);
-            for (int i = 0; i < numLines; i++) {
-                String delayedResponse = inFromServer.readLine();
-                if (delayedResponse.contains("bytes will be sent. Respond with SEND command to proceed with retrieving")) {
-                    recieveReady = true;
-                }
-                System.out.println(delayedResponse);
-            }
-        } catch (NumberFormatException e) {
-            System.out.println(response);
-        }
-    }
-
     public void receiveFile(String msg) throws IOException {
-        outToServer.writeBytes(msg + "\n");
 
         String filename = inFromServer.readLine();
         String line;
@@ -69,6 +53,22 @@ public class Client {
 
         bufferedWriter.close();
         recieveReady = false;
+    }
+
+    private void recieveMsg() throws IOException {
+        String response = inFromServer.readLine();
+        try {
+            int numLines = Integer.parseInt(response);
+            for (int i = 0; i < numLines; i++) {
+                String delayedResponse = inFromServer.readLine();
+                System.out.println(delayedResponse);
+                if (delayedResponse.contains("bytes will be sent. Respond with SEND command to proceed with retrieving")) {
+                    recieveReady = true;
+                }
+            }
+        } catch (NumberFormatException e) {
+            System.out.println(response);
+        }
     }
 
     public static void main(String[] args) throws IOException {

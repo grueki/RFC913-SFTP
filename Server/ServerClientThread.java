@@ -78,57 +78,55 @@ public class ServerClientThread extends Thread {
             try {
                 switch (clientCmd[0].toUpperCase()) {
                     case "USER":
-                        if (!renameReady) {
+                        if (!retrieveReady) {
                             USER(clientCmd[1]);
                             break;
                         }
                     case "ACCT":
-                        if (!renameReady) {
+                        if (!retrieveReady) {
                             ACCT(clientCmd[1]);
                             break;
                         }
                     case "PASS":
-                        if (!renameReady) {
+                        if (!retrieveReady) {
                             PASS(clientCmd[1]);
                             break;
                         }
                     case "TYPE":
-                        if (!renameReady) {
+                        if (!retrieveReady) {
                             TYPE(clientCmd[1]);
                             break;
                         }
                     case "LIST":
-                        if (!renameReady) {
+                        if (!retrieveReady) {
                             LIST(clientCmd[1]);
                             break;
                         }
                     case "CDIR":
-                        if (!renameReady) {
+                        if (!retrieveReady) {
                             CDIR(clientCmd[1]);
                             break;
                         }
                     case "KILL":
-                        if (!renameReady) {
+                        if (!retrieveReady) {
                             KILL(clientCmd[1]);
                             break;
                         }
                     case "NAME":
-                        if (!renameReady) {
+                        if (!retrieveReady) {
                             NAME(clientCmd[1]);
                             break;
                         }
                     case "DONE":
-                        if (!renameReady) {
-                            DONE();
-                            return;
-                        }
+                        DONE();
+                        return;
                     case "RETR":
-                        if (!renameReady) {
+                        if (!retrieveReady) {
                             RETR(clientCmd[1]);
                             break;
                         }
                     case "STOR":
-                        if (!renameReady) {
+                        if (!retrieveReady) {
                             STOR();
                             break;
                         }
@@ -148,6 +146,7 @@ public class ServerClientThread extends Thread {
                             break;
                         }
                     default:
+                        System.out.println("ERRONEOUS COMMAND: " + clientCmd[0].toUpperCase());
                         status = STATUS_ERROR;
                         serverMsg = "Invalid command";
                         break;
