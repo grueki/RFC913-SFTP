@@ -13,6 +13,8 @@ public class Tests {
 
     String message;
     String response;
+    String expected;
+    int numLines;
 
     static DataOutputStream outToServer;
     static BufferedReader inFromServer;
@@ -33,11 +35,13 @@ public class Tests {
         outToServer = new DataOutputStream(testClientSocket.getOutputStream());
         inFromServer = new BufferedReader(new InputStreamReader(testClientSocket.getInputStream()));
 
-        System.out.println(inFromServer.readLine());
+        // skip host info for tests
+        inFromServer.readLine();
     }
 
     public String sendMessage(String msg) throws IOException {
         outToServer.writeBytes(msg + "\n");
+        numLines = Integer.parseInt(inFromServer.readLine());
         return inFromServer.readLine();
     }
 
@@ -48,8 +52,18 @@ public class Tests {
 
         response = sendMessage(message);
 
-        System.out.println(response.contains("Logged in as user_only"));
+        expected = "! Logged in as user_only";
 
+        if (response.equals(expected)) {
+            System.out.println("PASSED");
+        }
+        else {
+            System.out.println("FAILED");
+        }
+
+
+        System.out.println("Expected: " + expected);
+        System.out.println("Received: " + response);
     }
 
 }
