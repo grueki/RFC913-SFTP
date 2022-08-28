@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -70,10 +71,12 @@ public class ServerClientThread extends Thread {
 
     public void loop() throws IOException {
         String clientMsg;
-        String[] clientCmd;
+        String[] clientCmd = new String[2];
 
         while ((clientMsg = inFromClient.readLine()) != null) {
-            clientCmd = clientMsg.split("\\s+");
+            int index =  clientMsg.contains(" ") ? clientMsg.indexOf(" ") : clientMsg.length();
+            clientCmd[0] = clientMsg.substring(0, index);
+            clientCmd[1] = clientMsg.substring(clientMsg.indexOf(" ") + 1);
 
             try {
                 switch (clientCmd[0].toUpperCase()) {
@@ -117,6 +120,11 @@ public class ServerClientThread extends Thread {
                             NAME(clientCmd[1]);
                             break;
                         }
+                    case "TOBE":
+                        if (renameReady) {
+                            TOBE(clientCmd[1]);
+                            break;
+                        }
                     case "DONE":
                         DONE();
                         return;
@@ -125,14 +133,9 @@ public class ServerClientThread extends Thread {
                             RETR(clientCmd[1]);
                             break;
                         }
-                    case "STOR":
-                        if (!retrieveReady) {
-                            STOR();
-                            break;
-                        }
-                    case "TOBE":
-                        if (renameReady) {
-                            TOBE(clientCmd[1]);
+                    case "SEND":
+                        if (retrieveReady) {
+                            SEND();
                             break;
                         }
                     case "STOP":
@@ -140,13 +143,12 @@ public class ServerClientThread extends Thread {
                             STOP();
                             break;
                         }
-                    case "SEND":
-                        if (retrieveReady) {
-                            SEND();
+                    case "STOR":
+                        if (!retrieveReady) {
+                            STOR(clientCmd[1]);
                             break;
                         }
                     default:
-                        System.out.println("ERRONEOUS COMMAND: " + clientCmd[0].toUpperCase());
                         status = STATUS_ERROR;
                         serverMsg = "Invalid command";
                         break;
@@ -313,42 +315,48 @@ public class ServerClientThread extends Thread {
                 dirToList = new File(rootDir, currentDir);
             }
 
-            switch (list_args[0].toUpperCase()) {
-                case "F":
-                    Set<String> listedFilenames = Stream.of(Objects.requireNonNull(dirToList.listFiles()))
-                            .filter(file -> !file.isDirectory())
-                            .map(File::getName)
-                            .collect(Collectors.toSet());
-                    status = STATUS_SUCCESS;
-                    serverMsg = dirToList + "\n" + String.join("\n", listedFilenames);
-                    linesToRead = listedFilenames.size() + 1;
-                    break;
-                case "V":
-                    DateFormat formatter =  new SimpleDateFormat("dd/MM/yyyy hh:mm:ss");
-                    Set<File> listedFiles = Stream.of(Objects.requireNonNull(dirToList.listFiles()))
-                            .filter(file -> !file.isDirectory())
-                            .collect(Collectors.toSet());
-                    status = STATUS_SUCCESS;
-                    StringBuilder msg = new StringBuilder(dirToList.getCanonicalPath());
+            if (dirToList.exists()) {
+                switch (list_args[0].toUpperCase()) {
+                    case "F":
+                        Set<String> listedFilenames = Stream.of(Objects.requireNonNull(dirToList.listFiles()))
+                                .filter(file -> !file.isDirectory())
+                                .map(File::getName)
+                                .collect(Collectors.toSet());
+                        status = STATUS_SUCCESS;
+                        serverMsg = dirToList + "\n" + String.join("\n", listedFilenames);
+                        linesToRead = listedFilenames.size() + 1;
+                        break;
+                    case "V":
+                        DateFormat formatter = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss");
+                        Set<File> listedFiles = Stream.of(Objects.requireNonNull(dirToList.listFiles()))
+                                .filter(file -> !file.isDirectory())
+                                .collect(Collectors.toSet());
+                        status = STATUS_SUCCESS;
+                        StringBuilder msg = new StringBuilder(dirToList.getCanonicalPath());
 
-                    for (File file : listedFiles) {
-                        msg.append("\n");
-                        msg.append(file.getName());
-                        msg.append(" ");
-                        msg.append("(size: ");
-                        msg.append(file.length());
-                        msg.append(" bytes, last modified: ");
-                        msg.append(formatter.format(file.lastModified()));
-                        msg.append(")");
-                    }
+                        for (File file : listedFiles) {
+                            msg.append("\n");
+                            msg.append(file.getName());
+                            msg.append(" ");
+                            msg.append("(size: ");
+                            msg.append(file.length());
+                            msg.append(" bytes, last modified: ");
+                            msg.append(formatter.format(file.lastModified()));
+                            msg.append(")");
+                        }
 
-                    serverMsg = msg.toString();
-                    linesToRead = listedFiles.size() + 1;
-                    break;
-                default:
-                    status = STATUS_ERROR;
-                    serverMsg = "Specify a listing format. Please follow the command 'LIST' with 'F' (standard formatting) or 'V' (verbose formatting).";
-                    break;
+                        serverMsg = msg.toString();
+                        linesToRead = listedFiles.size() + 1;
+                        break;
+                    default:
+                        status = STATUS_ERROR;
+                        serverMsg = "Specify a listing format. Please follow the command 'LIST' with 'F' (standard formatting) or 'V' (verbose formatting).";
+                        break;
+                }
+            }
+            else {
+                status = STATUS_ERROR;
+                serverMsg = dirToList + " does not exist. Please try again.";
             }
         }
         else {
@@ -539,11 +547,63 @@ public class ServerClientThread extends Thread {
         retrieveReady = false;
     }
 
-    public void STOR() {
+    public void STOR(String stor_cmd) throws IOException {
         if (isLoggedIn) {
-            System.out.println("Store command");
-            status = STATUS_SUCCESS;
-            serverMsg = "Store command sent to server!";
+            String[] stor_args = stor_cmd.split("\\s+");
+
+            if (stor_args.length >= 2 ) {
+                String filename = null;
+                String methodName = null;
+                BufferedWriter bufferedWriter = null;
+                boolean badInput = false;
+
+                switch (stor_args[0].toUpperCase()) {
+                    case "NEW":
+                        methodName = "new";
+                        filename = inFromClient.readLine();
+                        if (Files.exists(Paths.get(filename))) {
+                            int index = 0;
+
+                            while (Files.exists(Paths.get(filename + "_" + index))) {
+                                index++;
+                            }
+                            filename = filename + "_" + index;
+                        }
+                        bufferedWriter = new BufferedWriter(new FileWriter(filename));
+                        break;
+                    case "OLD":
+                        methodName = "overwrite";
+                        filename = inFromClient.readLine();
+                        bufferedWriter = new BufferedWriter(new FileWriter(filename));
+                        break;
+                    case "APP":
+                        methodName = "append";
+                        filename = inFromClient.readLine();
+                        bufferedWriter = new BufferedWriter(new FileWriter(filename, true));
+                        break;
+                    default:
+                        badInput = true;
+                        status = STATUS_ERROR;
+                        serverMsg = "Please write your STOR command in the format 'STOR { NEW | OLD | APP } filename' (e.g. STOR NEW myfile.txt)";
+                        break;
+                }
+                if (!badInput) {
+                    String line;
+                    while (!"END".equals(line = inFromClient.readLine())) {
+                        bufferedWriter.write(line);
+                        bufferedWriter.newLine();
+                    }
+
+                    bufferedWriter.close();
+
+                    status = STATUS_SUCCESS;
+                    serverMsg = filename + " has been stored in the server using the " + methodName + " method.";
+                }
+
+            } else {
+                status = STATUS_ERROR;
+                serverMsg = "Please write your STOR command in the format 'STOR { NEW | OLD | APP } filename' (e.g. STOR NEW myfile.txt)";
+            }
         }
         else {
             status = STATUS_ERROR;

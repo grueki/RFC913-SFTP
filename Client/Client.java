@@ -1,8 +1,9 @@
 package Client;
 
-import java.awt.*;
 import java.io.*;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class Client {
     static String HOST_DOMAIN = "localhost";
@@ -30,18 +31,30 @@ public class Client {
             System.out.print("Enter command: ");
             message = inFromUser.readLine();
 
-            outToServer.writeBytes(message + "\n");
-
-            if (message.equalsIgnoreCase("SEND") && recieveReady) {
-                receiveFile(message);
+            if (message.toUpperCase().contains("STOR")) {
+                String[] args = message.split("\\s+");
+                if (Files.exists(Paths.get(args[2]))) {
+                    outToServer.writeBytes(message + "\n");
+                    sendFile(args[2]);
+                    recieveMsg();
+                }
+                else {
+                    System.out.println("File does not exist. Aborting command.");
+                }
             }
-            recieveMsg();
+            else {
+                outToServer.writeBytes(message + "\n");
+
+                if (message.equalsIgnoreCase("SEND") && recieveReady) {
+                    receiveFile();
+                }
+                recieveMsg();
+            }
 
         } while (!message.equalsIgnoreCase("DONE"));
     }
 
-    public void receiveFile(String msg) throws IOException {
-
+    public void receiveFile() throws IOException {
         String filename = inFromServer.readLine();
         String line;
         BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(filename));
@@ -53,6 +66,21 @@ public class Client {
 
         bufferedWriter.close();
         recieveReady = false;
+    }
+
+    public void sendFile(String fileName) throws IOException {
+        String line;
+        outToServer.writeBytes(Paths.get(fileName).getFileName().toString()+"\n");
+
+        BufferedReader bufferedReader = new BufferedReader(new FileReader(fileName));
+
+        while ((line = bufferedReader.readLine()) != null) {
+            outToServer.writeBytes(line + "\n");
+        }
+
+        outToServer.writeBytes("END\n");
+
+        bufferedReader.close();
     }
 
     private void recieveMsg() throws IOException {
