@@ -1,9 +1,6 @@
 package Client;
 
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.Socket;
 
 public class Client {
@@ -28,16 +25,15 @@ public class Client {
 
         System.out.println(inFromServer.readLine());
 
-        while (true) {
+        do {
             System.out.print("Enter command: ");
             message = inFromUser.readLine();
-            sendMessage(message);
-//            System.out.println(response);
-
-            if (message.equalsIgnoreCase("DONE")){
-                break;
+            if (message.equalsIgnoreCase("SEND")) {
+                receiveFile(message);
             }
-        }
+            sendMessage(message);
+
+        } while (!message.equalsIgnoreCase("DONE"));
     }
 
     public void sendMessage(String msg) throws IOException {
@@ -53,12 +49,19 @@ public class Client {
         }
     }
 
-    public void stop() throws IOException {
-        inFromServer.close();
-        outToServer.close();
-        inFromUser.close();
-        clientSocket.close();
-        System.exit(0);
+    public void receiveFile(String msg) throws IOException {
+        outToServer.writeBytes(msg + "\n");
+
+        String filename = inFromServer.readLine();
+        String line;
+        BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(filename));
+
+        while (!"END".equals(line = inFromServer.readLine())) {
+            bufferedWriter.write(line);
+            bufferedWriter.newLine();
+        }
+
+        bufferedWriter.close();
     }
 
     public static void main(String[] args) throws IOException {

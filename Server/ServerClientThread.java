@@ -31,7 +31,9 @@ public class ServerClientThread extends Thread {
     File rootDir = new File(System.getProperty("user.dir"));
     String currentDir = "";
     File fileToRename;
+    File fileToSend;
     boolean renameReady = false;
+    boolean retrieveReady = false;
     boolean isLoggedIn = false;
     int linesToRead = 1;
 
@@ -76,41 +78,73 @@ public class ServerClientThread extends Thread {
             try {
                 switch (clientCmd[0].toUpperCase()) {
                     case "USER":
-                        USER(clientCmd[1]);
-                        break;
+                        if (!renameReady) {
+                            USER(clientCmd[1]);
+                            break;
+                        }
                     case "ACCT":
-                        ACCT(clientCmd[1]);
-                        break;
+                        if (!renameReady) {
+                            ACCT(clientCmd[1]);
+                            break;
+                        }
                     case "PASS":
-                        PASS(clientCmd[1]);
-                        break;
+                        if (!renameReady) {
+                            PASS(clientCmd[1]);
+                            break;
+                        }
                     case "TYPE":
-                        TYPE(clientCmd[1]);
-                        break;
+                        if (!renameReady) {
+                            TYPE(clientCmd[1]);
+                            break;
+                        }
                     case "LIST":
-                        LIST(clientCmd[1]);
-                        break;
+                        if (!renameReady) {
+                            LIST(clientCmd[1]);
+                            break;
+                        }
                     case "CDIR":
-                        CDIR(clientCmd[1]);
-                        break;
+                        if (!renameReady) {
+                            CDIR(clientCmd[1]);
+                            break;
+                        }
                     case "KILL":
-                        KILL(clientCmd[1]);
-                        break;
+                        if (!renameReady) {
+                            KILL(clientCmd[1]);
+                            break;
+                        }
                     case "NAME":
-                        NAME(clientCmd[1]);
-                        break;
+                        if (!renameReady) {
+                            NAME(clientCmd[1]);
+                            break;
+                        }
                     case "DONE":
-                        DONE();
-                        return;
+                        if (!renameReady) {
+                            DONE();
+                            return;
+                        }
                     case "RETR":
-                        RETR();
-                        break;
+                        if (!renameReady) {
+                            RETR(clientCmd[1]);
+                            break;
+                        }
                     case "STOR":
-                        STOR();
-                        break;
+                        if (!renameReady) {
+                            STOR();
+                            break;
+                        }
                     case "TOBE":
                         if (renameReady) {
                             TOBE(clientCmd[1]);
+                            break;
+                        }
+                    case "STOP":
+                        if (retrieveReady) {
+                            STOP();
+                            break;
+                        }
+                    case "SEND":
+                        if (retrieveReady) {
+                            SEND();
                             break;
                         }
                     default:
@@ -455,16 +489,55 @@ public class ServerClientThread extends Thread {
         clientSocket.close();
     }
 
-    public void RETR() {
+    public void RETR(String retrieve_path) {
         if (isLoggedIn) {
-            System.out.println("Request command");
-            status = STATUS_SUCCESS;
-            serverMsg = "Request command sent to server!";
+            File fullPath;
+            if (Paths.get(retrieve_path).isAbsolute()) {
+                fullPath = new File(retrieve_path);
+            } else {
+                fullPath = new File(rootDir, currentDir + File.separator + retrieve_path);
+            }
+            if(fullPath.exists()) {
+                fileToSend = fullPath;
+                retrieveReady = true;
+                status = String.valueOf(fullPath.length());
+                serverMsg = " bytes will be sent. Respond with SEND command to proceed with retrieving " + retrieve_path + ", or STOP command to cancel transfer.";
+            }
+            else {
+                status = STATUS_ERROR;
+                serverMsg = retrieve_path + " doesn't exist. Please try again.";
+            }
         }
         else {
             status = STATUS_ERROR;
             serverMsg = "You are not logged in. Please log in using the USER command.";
         }
+    }
+
+    public void STOP() {
+        status = STATUS_SUCCESS;
+        serverMsg = "RETR of file " + fileToSend + " has been aborted.";
+        retrieveReady = false;
+    }
+
+    public void SEND() throws IOException {
+        String line;
+        outToClient.writeBytes(fileToSend.toPath().getFileName().toString()+"\n");
+
+        BufferedReader bufferedReader = new BufferedReader(new FileReader(fileToSend));
+
+        while ((line = bufferedReader.readLine()) != null) {
+            outToClient.writeBytes(line + "\n");
+        }
+
+        outToClient.writeBytes("END\n");
+
+        bufferedReader.close();
+
+        status = STATUS_SUCCESS;
+        serverMsg = fileToSend.toPath().getFileName().toString() + " has been saved to the client!";
+
+        retrieveReady = false;
     }
 
     public void STOR() {
