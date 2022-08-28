@@ -13,6 +13,7 @@ public class Client {
     private DataOutputStream outToServer;
 
     private BufferedReader inFromUser;
+    boolean recieveReady = false;
 
     public void start() throws IOException {
         String message;
@@ -28,7 +29,8 @@ public class Client {
         do {
             System.out.print("Enter command: ");
             message = inFromUser.readLine();
-            if (message.equalsIgnoreCase("SEND")) {
+            if (message.equalsIgnoreCase("SEND") && recieveReady) {
+                System.out.println("ENTERED");
                 receiveFile(message);
             }
             sendMessage(message);
@@ -42,7 +44,11 @@ public class Client {
         try {
             int numLines = Integer.parseInt(response);
             for (int i = 0; i < numLines; i++) {
-                System.out.println(inFromServer.readLine());
+                String delayedResponse = inFromServer.readLine();
+                if (delayedResponse.contains("bytes will be sent. Respond with SEND command to proceed with retrieving")) {
+                    recieveReady = true;
+                }
+                System.out.println(delayedResponse);
             }
         } catch (NumberFormatException e) {
             System.out.println(response);
@@ -62,6 +68,7 @@ public class Client {
         }
 
         bufferedWriter.close();
+        recieveReady = false;
     }
 
     public static void main(String[] args) throws IOException {
