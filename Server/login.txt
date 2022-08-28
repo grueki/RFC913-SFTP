@@ -1,6 +1,6 @@
 user_only,,
 user_w_pwd,,pass1
-user_w_acc,acc1,
-user_w_both,acc2,pass2
-multi_acc,acc1|acc2|acc3,,
-multi_acc_w_pwd,acc1|acc2|acc3|acc4,pass3
+user_w_acct,acct1,
+user_w_both,acct2,pass2
+multi_acct,acct1|acct2|acct3,,
+multi_acct_w_pwd,acct1|acct2|acct3|acct4,pass3

@@ -31,9 +31,13 @@ public class Client {
             System.out.print("Enter command: ");
             message = inFromUser.readLine();
 
-            if (message.toUpperCase().contains("STOR")) {
-                String[] args = message.split("\\s+");
-                if (Files.exists(Paths.get(args[2]))) {
+            String[] args = message.split("\\s+");
+
+            if (message.toUpperCase().contains("STOR") && args.length == 3) {
+                if ((args[1].equalsIgnoreCase("NEW") ||
+                        args[1].equalsIgnoreCase("OLD") ||
+                        args[1].equalsIgnoreCase("APP")) &&
+                        Files.exists(Paths.get(args[2]))) {
                     outToServer.writeBytes(message + "\n");
                     sendFile(args[2]);
                     recieveMsg();

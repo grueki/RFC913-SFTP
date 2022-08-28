@@ -21,6 +21,9 @@ The Server hosts each Client on a different thread, allowing it to serve multipl
 4. Execute the 'run' script with `./run.sh` to start the client
 
 The login information can be found below. These logins are informed by the `/Server/login.txt` file.
+Commands are case-insensitive, however information like filenames and directories are case-sensitive.
+
+All commands from the RFC-913 SFTP have been implemented. You can view the RFC-913 commands and their functions [here](https://www.rfc-editor.org/rfc/rfc913). 
 
 | User-id         | Account             | Password |
 |-----------------|---------------------|----------|
@@ -39,7 +42,7 @@ To test, _first follow the steps as described in **Server Setup** to run the ser
 3. (First time only) You may need to execute the following command to give `./test.sh` permission: `chmod +x ./test.sh`
 4. Execute the 'test' script with `./test.sh` to start the testing client
 
-**1. User ID with no password/accound**
+**1. User ID with no password or account**
 ~~~
 +[hostname] RFC-913 SFTP
 Enter command: USER user_only
@@ -48,627 +51,846 @@ Enter command: DONE
 +Connection closed.
 ~~~
 
-**2. User ID with no password/account, attempted sign in with account and password** 
+**2. User ID with no password or account, attempted sign in with account and password** 
 ~~~
 +[hostname] RFC-913 SFTP
 Enter command: USER user_only
 ! Logged in as user_only
 Enter command: PASS somePassword
--Already logged in
+-Already logged in.
 Enter command: ACCT someAcct
 -Already logged in. No accounts associated with this user.
 Enter command: DONE
 +Connection closed.
 ~~~
 
+**3. Invalid user ID**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER 
+-user is not a valid user-id. Please try again.
+Enter command: USER benjamin
+-benjamin is not a valid user-id. Please try again.
+Enter command: DONE
++Connection closed.
+~~~
 
+**4. User with password and no accounts**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_w_pwd
++User-id valid, send account and/or password.
+Enter command: ACCT acct1
++Account valid (or not needed), send password.
+Enter command: PASS pass1
+! Password is correct (or not needed), logged in.
+Enter command: ACCT acct1
+! Account valid (or not needed), logged in.
+Enter command: DONE
++Connection closed.
+~~~
 
+**5. User with password and no accounts, incorrect password**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_w_pwd
++User-id valid, send account and/or password.
+Enter command: PASS wrongPwd
+-Wrong password, try again.
+Enter command: PASS PASS1
+-Wrong password, try again.
+Enter command: PASS pass1
+! Password is correct (or not needed), logged in.
+Enter command: DONE
++Connection closed.
+~~~
 
-3. User-id valid, password required
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user3
-+User-id valid, send account and password
-> pass pass3
-!Logged in
-> done
-+Closing connection
+**6. User with account and no password**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_w_acct
++User-id valid, send account and/or password.
+Enter command: PASS pass1
+-No passwords associated with this user. Please send account.
+Enter command: ACCT acct1
+! Account valid (or not needed), logged in.
+Enter command: PASS pass1
+-Already logged in.
+Enter command: DONE
++Connection closed.
+~~~
 
-4. User-id valid, account and password required
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user4
-+User-id valid, send account and password
-> acct acct1
-+Account valid, send password
-> pass pass4
-!Logged in
-> done
-+Closing connection
+**7. User with account and no password, incorrect account**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_w_acct
++User-id valid, send account and/or password.
+Enter command: ACCT acct8
+-Invalid account, try again.
+Enter command: ACCT acct2
+-Invalid account, try again.
+Enter command: ACCT acct1
+! Account valid (or not needed), logged in.
+Enter command: DONE 
++Connection closed.
+~~~
 
-5. User-id valid, account and password required. Multiple accounts
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user5
-+User-id valid, send account and password
-> pass pass5
-+Send account
-> acct acct1
-!Account valid, logged-in
-> acct acct2
-!Account valid, logged-in
-> acct acct3
-!Account valid, logged-in
-> done
-+Closing connection
+**9. User with both an account and a password**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_w_both
++User-id valid, send account and/or password.
+Enter command: ACCT acct2
++Account valid (or not needed), send password.
+Enter command: PASS pass2
+! Password is correct (or not needed), logged in.
+Enter command: DONE
++Connection closed.
+~~~
 
-6. User-id invalid
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user7
--Invalid user-id, try again
-> done
-+Closing connection
+**10. User with both an account and a password (alternate)**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_w_both
++User-id valid, send account and/or password.
+Enter command: PASS pass2
++Password valid (or not needed), send account.
+Enter command: ACCT acct2
+! Account valid (or not needed), logged in.
+Enter command: DONE
++Connection closed.
+~~~
 
-7. Account invalid
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user4
-+User-id valid, send account and password
-> acct acct2
--Invalid account, try again
-> done
-+Closing connection
+**11. User with multiple accounts, no password**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER multi_acct
++User-id valid, send account and/or password.
+Enter command: PASS unnecessaryPassword
+-No passwords associated with this user. Please send account.
+Enter command: ACCT acct2
+! Account valid (or not needed), logged in.
+Enter command: ACCT acct1
+! Account valid (or not needed), logged in.
+Enter command: ACCT acct6
+-Invalid account, try again.
+Enter command: ACCT acct3
+! Account valid (or not needed), logged in.
+Enter command: DONE
++Connection closed.
+~~~
 
-8. Password invalid
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user4
-+User-id valid, send account and password
-> pass wrong
--Wrong password, try again
-> done
-+Closing connection
+**12. User with multiple accounts and a password**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER multi_acct_w_pwd 
++User-id valid, send account and/or password.
+Enter command: ACCT acct2
++Account valid (or not needed), send password.
+Enter command: ACCT acct4
++Account valid (or not needed), send password.
+Enter command: ACCT acct55
+-Invalid account, try again.
+Enter command: PASS pass6
+-Wrong password, try again.
+Enter command: PASS pass3
+! Password is correct (or not needed), logged in.
+Enter command: DONE
++Connection closed.
+~~~
 
-9. User-id, argument error
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user7 user7
-ERROR: Invalid Arguments
-Usage: USER user-id
-> done
-+Closing connection
+**13. User attempts to access advanced commands without logging in**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: LIST f
+-You are not logged in. Please log in using the USER command.
+Enter command: TYPE C 
+-You are not logged in. Please log in using the USER command.
+Enter command: LIST v ..
+-You are not logged in. Please log in using the USER command.
+Enter command: KILL DeleteMe.txt              
+-You are not logged in. Please log in using the USER command.
+Enter command: DONE
++Connection closed.
+~~~
 
-10. Account, argument error
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user4
-+User-id valid, send account and password
-> acct acct2 acct2
-ERROR: Invalid Arguments
-Usage: ACCT account
-> done
-+Closing connection
+**14. User attempts to access advanced commands mid-way through logging in**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_w_both
++User-id valid, send account and/or password.
+Enter command: LIST f ..
+-You are not logged in. Please log in using the USER command.
+Enter command: ACCT acct2
++Account valid (or not needed), send password.
+Enter command: LIST f ..
+-You are not logged in. Please log in using the USER command.
+Enter command: PASS pass2
+! Password is correct (or not needed), logged in.
+Enter command: LIST f ..
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server/..
+.gitignore
+RFC913-SFTP.iml
+README.md
+Enter command: DONE
++Connection closed.
+~~~
 
-11. Password, argument error
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user4
-+User-id valid, send account and password
-> pass wrong wrong
-ERROR: Invalid Arguments
-Usage: PASS password
-> done
-+Closing connection
+**15. Change data transfer mode**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_only
+! Logged in as user_only
+Enter command: TYPE a
++Using ASCII mode.
+Enter command: TYPE B
++Using binary mode.
+Enter command: TYPE c
++Using continuous mode.
+Enter command: TYPE invalid
+-Invalid type. Please follow the command 'TYPE' with 'A' (ASCII), 'B' (Byte) or 'C' (Continuous) to select transmission mode.
+Enter command: TYPE :)
+-Invalid type. Please follow the command 'TYPE' with 'A' (ASCII), 'B' (Byte) or 'C' (Continuous) to select transmission mode.
+Enter command: DONE
++Connection closed.
+~~~
 
-12. Type
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> type a
-+Using Ascii mode
-> type b
-+Using Binary mode
-> type c
-+Using Continuous mode
-> done
-+Closing connection
+**16. List current directory**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_only
+! Logged in as user_only
+Enter command: LIST F
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server
+Tests.class
+run.sh
+Tests.java
+RenameMe.txt
+Server.java
+test.sh
+ServerClientThread.java
+Server.class
+ServerClientThread.class
+login.txt
+Enter command: LIST v
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server
+RenameMe.txt (size: 88 bytes, last modified: 28/08/2022 04:47:01)
+Tests.class (size: 3915 bytes, last modified: 28/08/2022 09:19:51)
+Tests.java (size: 3599 bytes, last modified: 28/08/2022 09:23:18)
+Server.java (size: 1200 bytes, last modified: 28/08/2022 07:55:45)
+test.sh (size: 31 bytes, last modified: 28/08/2022 06:33:06)
+run.sh (size: 32 bytes, last modified: 23/08/2022 12:20:26)
+ServerClientThread.class (size: 15502 bytes, last modified: 28/08/2022 09:19:51)
+ServerClientThread.java (size: 22891 bytes, last modified: 28/08/2022 09:29:38)
+Server.class (size: 2217 bytes, last modified: 28/08/2022 09:19:51)
+login.txt (size: 150 bytes, last modified: 28/08/2022 09:25:31)
+Enter command: DONE
++Connection closed.
+~~~
 
-13. Type, argument error
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> type a a
-ERROR: Invalid Arguments
-Usage: TYPE { A | B | C }
-> type d
--Type not valid
-> done
-+Closing connection
+**17. List directory of choice (relative or absolute path)**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_only
+! Logged in as user_only
+Enter command: LIST f ..
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server/..
+.gitignore
+RFC913-SFTP.iml
+README.md
+Enter command: LIST v ../Client
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Client
+run.sh (size: 32 bytes, last modified: 23/08/2022 12:21:12)
+Client.class (size: 3958 bytes, last modified: 28/08/2022 07:53:31)
+StoreMe.txt (size: 47 bytes, last modified: 28/08/2022 04:46:42)
+Client.java (size: 3369 bytes, last modified: 28/08/2022 07:02:24)
+Enter command: LIST f /home/izzy/Documents/UoA/Sem_2_2022
++/home/izzy/Documents/UoA/Sem_2_2022
+ijoh785.tgz
+Enter command: DONE
++Connection closed.
+~~~
 
-14. List standard, current directory
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> list f
-+user1/
-file2.txt
-file.txt
-file3.txt
-file1.txt
-temp
-file4.txt
-.DS_Store
-data2.jpg
-data.jpg
-folder1
-license.txt
-> done
-+Closing connection
+**18. List directory with invalid format and invalid file path**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_only
+! Logged in as user_only
+Enter command: LIST stuff
+-Specify a listing format. Please follow the command 'LIST' with 'F' (standard formatting) or 'V' (verbose formatting).
+Enter command: LIST things ..
+-Specify a listing format. Please follow the command 'LIST' with 'F' (standard formatting) or 'V' (verbose formatting).
+Enter command: LIST v ../Clyint
+-/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Clyint does not exist. Please try again.
+Enter command: LIST F blahblah
+-/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server/blahblah does not exist. Please try again.
+Enter command: DONE
++Connection closed.
+~~~
 
-15. List standard, other directory
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> list f temp
-+user1/temp
-file4.txt
-file5.txt
-data.csv
-> done
-+Closing connection
+**19. Change current working directory (relative or absolute path)**
+~~~
+Enter command: USER user_only                         
+! Logged in as user_only
+Enter command: CDIR ..
+! Changed working directory to /home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP
+Enter command: CDIR Client
+! Changed working directory to /home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Client
+Enter command: LIST f
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server/../Client
+run.sh
+StoreMe.txt
+Client.class
+Client.java
+Enter command: CDIR /home/izzy/Documents/UoA/Sem_1_2022
+! Changed working directory to /home/izzy/Documents/UoA/Sem_1_2022
+Enter command: CDIR /home/izzy/Documents/UoA/Sem_2_2022        
+! Changed working directory to /home/izzy/Documents/UoA/Sem_2_2022
+Enter command: LIST f
++/home/izzy/Documents/UoA/Sem_2_2022
+ijoh785.tgz
+Enter command: DONE
++Connection closed.
+~~~
 
-16. List verbose, current directory
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> list v
-+user1/
-Name: file2.txt    Path: user1/file2.txt    Size: 9 Bytes    
-Name: file.txt    Path: user1/file.txt    Size: 16 Bytes    
-Name: file3.txt    Path: user1/file3.txt    Size: 9 Bytes    
-Name: file1.txt    Path: user1/file1.txt    Size: 8 Bytes    
-Name: temp    Path: user1/temp    Size: 160 Bytes    
-Name: file4.txt    Path: user1/file4.txt    Size: 8 Bytes    
-Name: .DS_Store    Path: user1/.DS_Store    Size: 6148 Bytes    
-Name: data2.jpg    Path: user1/data2.jpg    Size: 2345 Bytes    
-Name: data.jpg    Path: user1/data.jpg    Size: 50300 Bytes    
-Name: folder1    Path: user1/folder1    Size: 128 Bytes    
-Name: license.txt    Path: user1/license.txt    Size: 11 Bytes    
-> done
-+Closing connection
+**20. Change directory to invalid file path**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_only
+! Logged in as user_only
+Enter command: CDIR ../Clyint
+-Directory does not exist.
+Enter command: CDIR /home/izzy/Documents/UoA/Sem_2_2028
+-Directory does not exist.
+Enter command: CDIR blahblahblah
+-Directory does not exist.
+Enter command: DONE
++Connection closed.
+~~~
 
-17. List, non-existent directory
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> list f fake
--Cant list directory because: user1/fake does not exist
-> done
-+Closing connection
+**21. Delete a file**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_only
+! Logged in as user_only
+Enter command: LIST f
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server
+Tests.class
+run.sh
+Tests.java
+RenameMe.txt
+Server.java
+test.sh
+ServerClientThread.java
+Server.class
+DeleteMe.txt
+ServerClientThread.class
+login.txt
+Enter command: KILL DeleteMe.txt
++DeleteMe.txt deleted
+Enter command: LIST f
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server
+Tests.class
+run.sh
+Tests.java
+RenameMe.txt
+Server.java
+test.sh
+ServerClientThread.java
+Server.class
+ServerClientThread.class
+login.txt
+Enter command: DONE
++Connection closed.
+~~~
 
-18. List file instead of directory
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> list f license.txt
--Cant list directory because: user1/license.txt is not a directory
-> done
-+Closing connection
+**22. Delete a file by file path**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_only
+! Logged in as user_only
+Enter command: LIST f ../Client
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server/../Client
+run.sh
+StoreMe.txt
+Client.class
+DeleteMe.txt
+Client.java
+Enter command: KILL ../Client/DeleteMe.txt
++../Client/DeleteMe.txt deleted
+Enter command: LIST f ../Client
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server/../Client
+run.sh
+StoreMe.txt
+Client.class
+Client.java
+Enter command: DONE
++Connection closed.
+~~~
 
-19. List, argument error
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> list f / /
-ERROR: Invalid Arguments
-Usage: LIST { F | V } directory-path
-> list g
--Argument error
-> done
-+Closing connection
+**23. Delete a non-existent/invalid file**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_only
+! Logged in as user_only
+Enter command: LIST f
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server
+Tests.class
+run.sh
+Tests.java
+RenameMe.txt
+Server.java
+test.sh
+ServerClientThread.java
+Server.class
+ServerClientThread.class
+login.txt
+Enter command: KILL abc.txt     
+-File not deleted because it doesn't exist.
+Enter command: KILL blahblahblah
+-File not deleted because it doesn't exist.
+Enter command: KILL ../Client/def.txt
+-File not deleted because it doesn't exist.
+Enter command: DONE
++Connection closed.
+~~~
 
-20. Change directory, relative path
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> cdir folder1
-!Changed working dir to user1/folder1
-> cdir folder2
-!Changed working dir to user1/folder1/folder2
-> done
-+Closing connection
+**24. Rename file**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_only
+! Logged in as user_only
+Enter command: LIST f
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server
+Tests.class
+run.sh
+Tests.java
+RenameMe.txt
+Server.java
+test.sh
+ServerClientThread.java
+Server.class
+ServerClientThread.class
+login.txt
+Enter command: NAME RenameMe.txt
++RenameMe.txtFile exists. Use the TOBE command next to rename RenameMe.txt
+Enter command: TOBE NewName.txt
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server/RenameMe.txt got renamed to NewName.txt
+Enter command: LIST f
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server
+Tests.class
+run.sh
+Tests.java
+Server.java
+test.sh
+NewName.txt
+ServerClientThread.java
+Server.class
+ServerClientThread.class
+login.txt
+Enter command: DONE
++Connection closed.
+~~~
 
-21. Change directory, user root
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> cdir /
-!Changed working dir to user1/
-> done
-+Closing connection
+**25. Rename invalid file**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_only
+! Logged in as user_only
+Enter command: LIST f
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server
+Tests.class
+run.sh
+Tests.java
+RenameMe.txt
+Server.java
+test.sh
+ServerClientThread.java
+Server.class
+ServerClientThread.class
+login.txt
+Enter command: NAME DontRenameMe.txt
+-Can't find file DontRenameMe.txt
+Enter command: NAME blahblahblah
+-Can't find file blahblahblah
+Enter command: DONE
++Connection closed.
+~~~
 
-22. Change directory, absolute path
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> cdir /folder1/folder2
-!Changed working dir to user1/folder1/folder2
-> done
-+Closing connection
+**26. Taking actions between NAME and TOBE**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_only
+! Logged in as user_only
+Enter command: LIST f
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server
+Tests.class
+run.sh
+Tests.java
+RenameMe.txt
+Server.java
+test.sh
+ServerClientThread.java
+Server.class
+ServerClientThread.class
+login.txt
+Enter command: NAME RenameMe.txt
++RenameMe.txtFile exists. Use the TOBE command next to rename RenameMe.txt
+Enter command: LIST f ../Client          
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server/../Client
+run.sh
+StoreMe.txt
+Client.class
+Client.java
+Enter command: KILL blahblah
+-File not deleted because it doesn't exist.
+Enter command: TOBE NewName.txt
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server/RenameMe.txt got renamed to NewName.txt
+Enter command: LIST f
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server
+Tests.class
+run.sh
+Tests.java
+Server.java
+test.sh
+NewName.txt
+ServerClientThread.java
+Server.class
+ServerClientThread.class
+login.txt
+Enter command: DONE
++Connection closed.
+~~~
 
-23. Change directory, non-existent directory
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> cdir folder1/folder2/folder3
--Cant connect to directory because: user1/folder1/folder2/folder3 does not exist
-> done
-+Closing connection
+**27. File is deleted between NAME and TOBE**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_only	
+! Logged in as user_only
+Enter command: LIST f 
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server
+Tests.class
+run.sh
+Tests.java
+RenameMe.txt
+Server.java
+test.sh
+ServerClientThread.java
+Server.class
+ServerClientThread.class
+login.txt
+Enter command: NAME RenameMe.txt
++RenameMe.txtFile exists. Use the TOBE command next to rename RenameMe.txt
+Enter command: KILL RenameMe.txt
++RenameMe.txt deleted
+Enter command: TOBE NewName.txt
+-File didn't get renamed.
+Enter command: TOBE AnotherName.txt
+-File didn't get renamed.
+Enter command: DONE
++Connection closed.
+~~~
 
-24. Change directory, file instead of directory
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> cdir temp/data.csv
--Cant list directory because: user1/temp/data.csv is not a directory
-> done
-+Closing connection
+**28. Retrieve file from server**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_only
+! Logged in as user_only
+Enter command: LIST f
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server
+Tests.class
+run.sh
+Tests.java
+Server.java
+test.sh
+ServerClientThread.java
+Server.class
+RetrieveMe.txt
+ServerClientThread.class
+login.txt
+Enter command: RETR RetrieveMe.txt
+29 bytes will be sent. Respond with SEND command to proceed with retrieving RetrieveMe.txt, or STOP command to cancel transfer.
+Enter command: SEND
++RetrieveMe.txt has been saved to the client!
+Enter command: LIST v ../Client  
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Client
+run.sh (size: 32 bytes, last modified: 23/08/2022 12:21:12)
+RetrieveMe.txt (size: 30 bytes, last modified: 28/08/2022 10:35:27)
+Client.class (size: 3958 bytes, last modified: 28/08/2022 07:53:31)
+StoreMe.txt (size: 50 bytes, last modified: 28/08/2022 10:19:06)
+Client.java (size: 3369 bytes, last modified: 28/08/2022 07:02:24)
+Enter command: DONE
++Connection closed.
+~~~
 
-25. Change directory, account required
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user2
-+User-id valid, send account and password
-> cdir folder1
-+Directory exists, send account/password
-> acct acct1
-!Account valid, logged-in
-!Changed working dir to user2/folder1
-> done
-+Closing connection
+**29. STOP file retrieval**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_only
+! Logged in as user_only
+Enter command: LIST f
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server
+Tests.class
+run.sh
+Tests.java
+Server.java
+test.sh
+ServerClientThread.java
+Server.class
+RetrieveMe.txt
+ServerClientThread.class
+login.txt
+Enter command: RETR RetrieveMe.txt
+29 bytes will be sent. Respond with SEND command to proceed with retrieving RetrieveMe.txt, or STOP command to cancel transfer.
+Enter command: STOP
++RETR of file /home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server/RetrieveMe.txt has been aborted.
+Enter command: LIST f
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server
+Tests.class
+run.sh
+Tests.java
+Server.java
+test.sh
+ServerClientThread.java
+Server.class
+RetrieveMe.txt
+ServerClientThread.class
+login.txt
+Enter command: DONE
++Connection closed.
+~~~
 
-26. Change directory, password required
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user3
-+User-id valid, send account and password
-> cdir folder1
-+Directory exists, send account/password
-> pass pass3
-!Logged in
-!Changed working dir to user3/folder1
-> done
-+Closing connection
+**30. Take actions between RETR and SEND/STOP**
+~~~
++[hostname] RFC-913 SFTP 
+Enter command: USER user_only
+! Logged in as user_only
+Enter command: LIST f ../Client  
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server/../Client
+run.sh
+StoreMe.txt
+Client.class
+Client.java
+Enter command: RETR RetrieveMe.txt
+29 bytes will be sent. Respond with SEND command to proceed with retrieving RetrieveMe.txt, or STOP command to cancel transfer.
+Enter command: List f
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server
+Tests.class
+run.sh
+Tests.java
+Server.java
+test.sh
+ServerClientThread.java
+Server.class
+RetrieveMe.txt
+ServerClientThread.class
+login.txt
+Enter command: SEND
++RetrieveMe.txt has been saved to the client!
+Enter command: LIST f ../Client
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server/../Client
+run.sh
+StoreMe.txt
+Client.class
+RetrieveMe.txt
+Client.java
+Enter command: DONE
++Connection closed.
+~~~
 
-27. Change directory, account and password required
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user4
-+User-id valid, send account and password
-> cdir folder1
-+Directory exists, send account/password
-> acct acct1
-+Account valid, send password
-> pass pass4
-!Logged in
-!Changed working dir to user4/folder1
-> done
-+Closing connection
+**31. Retrieve invalid file**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_only
+! Logged in as user_only
+Enter command: LIST f
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server
+Tests.class
+run.sh
+Tests.java
+Server.java
+test.sh
+ServerClientThread.java
+Server.class
+RetrieveMe.txt
+ServerClientThread.class
+login.txt
+Enter command: RETR blahblahblah.txt
+-blahblahblah.txt doesn't exist. Please try again.
+Enter command: DONE
++Connection closed.
+~~~
 
-28. Change directory, argument error
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> cdir folder1 folder2
-ERROR: Invalid Arguments
-Usage: CDIR new-directory
-> done
-+Closing connection
+**32. Store file in server using NEW (make copy) method**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_only
+! Logged in as user_only
+Enter command: LIST f ../Client
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server/../Client
+run.sh
+StoreMe.txt
+Client.class
+Client.java
+Enter command: STOR new StoreMe.txt
++StoreMe.txt has been stored in the server using the new method.
+Enter command: LIST f
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server
+Tests.class
+run.sh
+StoreMe.txt
+Tests.java
+Server.java
+test.sh
+ServerClientThread.java
+Server.class
+RetrieveMe.txt
+ServerClientThread.class
+login.txt
+Enter command: STOR new StoreMe.txt
++StoreMe.txt_0 has been stored in the server using the new method.
+Enter command: STOR new StoreMe.txt
++StoreMe.txt_1 has been stored in the server using the new method.
+Enter command: LIST f
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server
+StoreMe.txt
+Tests.java
+test.sh
+ServerClientThread.java
+RetrieveMe.txt
+StoreMe.txt_1
+ServerClientThread.class
+StoreMe.txt_0
+Tests.class
+run.sh
+Server.java
+Server.class
+login.txt
+Enter command: DONE
++Connection closed.
+~~~
 
-29. Delete file
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> kill delete.txt
-+user1/delete.txt deleted
-> done
-+Closing connection
+**33. Store file in server using OLD (overwrite) method**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_only
+! Logged in as user_only
+Enter command: LIST f ../Client
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server/../Client
+run.sh
+StoreMe.txt
+Client.class
+Client.java
+Enter command: LIST f              
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server
+Tests.class
+run.sh
+Tests.java
+Server.java
+test.sh
+ServerClientThread.java
+Server.class
+RetrieveMe.txt
+ServerClientThread.class
+login.txt
+Enter command: STOR OLD StoreMe.txt
++StoreMe.txt has been stored in the server using the overwrite method.
+Enter command: STOR OLD StoreMe.txt
++StoreMe.txt has been stored in the server using the overwrite method.
+Enter command: STOR OLD StoreMe.txt
++StoreMe.txt has been stored in the server using the overwrite method.
+Enter command: STOR OLD StoreMe.txt
++StoreMe.txt has been stored in the server using the overwrite method.
+Enter command: LIST f
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server
+Tests.class
+run.sh
+StoreMe.txt
+Tests.java
+Server.java
+test.sh
+ServerClientThread.java
+Server.class
+RetrieveMe.txt
+ServerClientThread.class
+login.txt
+Enter command: DONE
++Connection closed.
+~~~
+Viewing the file StoreMe.txt in the Server directory shows that lines are being overwritten, rather than appended.
 
-30. Delete non-existent file
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> kill fake.txt
--Not deleted because user1/fake.txt does not exist
-> done
-+Closing connection
+![img_1.png](img_1.png)
 
-31. Delete, argument error
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> kill fake.txt fake.txt
-ERROR: Invalid Arguments
-Usage: KILL file-spec
-> done
-+Closing connection
+**34. Store file in server using APP (append) method**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_only
+! Logged in as user_only
+Enter command: LIST f
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server
+Tests.class
+run.sh
+Tests.java
+Server.java
+test.sh
+ServerClientThread.java
+Server.class
+RetrieveMe.txt
+ServerClientThread.class
+login.txt
+Enter command: STOR app StoreMe.txt
++StoreMe.txt has been stored in the server using the append method.
+Enter command: STOR app StoreMe.txt
++StoreMe.txt has been stored in the server using the append method.
+Enter command: STOR app StoreMe.txt
++StoreMe.txt has been stored in the server using the append method.
+Enter command: STOR app StoreMe.txt
++StoreMe.txt has been stored in the server using the append method.
+Enter command: LIST f
++/home/izzy/Documents/UoA/Sem_2_2022/RFC913-SFTP/Server
+Tests.class
+run.sh
+StoreMe.txt
+Tests.java
+Server.java
+test.sh
+ServerClientThread.java
+Server.class
+RetrieveMe.txt
+ServerClientThread.class
+login.txt
+Enter command: DONE
++Connection closed.
 
-32. Rename
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> name rename.txt
-+File exists
-> tobe new.txt
-+user1/rename.txt renamed to user1/new.txt
-> kill new.txt
-+user1/new.txt deleted
-> done
-+Closing connection
+~~~
+Viewing the file StoreMe.txt in the Server directory shows that lines are being appended, rather than overwritten. 
 
-33. Rename non-existent file
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> name fake.txt
--Can't find user1/fake.txt
-> done
-+Closing connection
+![img.png](img.png)
 
-34. Rename, file already exists
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> name file.txt
-+File exists
-> tobe file2.txt
--File wasn't renamed because user1/file2.txt already exists
-> done
-+Closing connection
+**35. Invalid STOR inputs**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: USER user_only
+! Logged in as user_only
+Enter command: STOR blah StoreMe.txt
+File does not exist. Aborting command.
+Enter command: STOR blah
+-Please write your STOR command in the format 'STOR { NEW | OLD | APP } filename' (e.g. STOR NEW myfile.txt)
+Enter command: STOR blah blah
+File does not exist. Aborting command.
+Enter command: DONE
++Connection closed.
+~~~
 
-35. Rename, argument error
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> name fake.txt fake.txt
-ERROR: Invalid Arguments
-Usage: NAME old-file-spec
-> name file.txt
-+File exists
-> tobe new.txt new.txt
-ERROR: Invalid Arguments
-Usage: TOBE new-file-spec
-> done
-+Closing connection
-
-36. Done
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> done
-+Closing connection
-
-37. Done, argument error
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> done done
-ERROR: Invalid Arguments
-Usage: DONE
-> done
-+Closing connection
-
-38. Retrieve
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> retr temp/data.csv
-+15 bytes will be sent
-> send
-+File sent
-> done
-+Closing connection
-
-39. Retrieve, stop sending
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> retr temp/data.csv
-+15 bytes will be sent
-> stop
-+File will not be sent
-> done
-+Closing connection
-
-40. Retrieve non-existent file
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> retr fake.txt
--File doesn't exist
-> done
-+Closing connection
-
-41. Retrieve directory instead of file
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> retr temp
--Specifier is not a file
-> done
-+Closing connection
-
-42. Retrieve, argument error
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> retr file.txt file.txt
-ERROR: Invalid Arguments
-Usage: RETR file-spec
-> retr file.txt
-+16 bytes will be sent
-> send send
-ERROR: Invalid Arguments
-Usage: SEND
-> stop stop
-ERROR: Invalid Arguments
-Usage: STOP
-> done
-+Closing connection
-
-43. Store new, file does not exist
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> stor new file.txt
-+File does not exist, will create new file
-> size 8
-+Saved user1/file.txt
-> done
-+Closing connection
-
-44. Store new, file exists
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> stor new file.txt
-+File exists, will create new generation of file
-> size 8
-+Saved user1/file5.txt
-> done
-+Closing connection
-
-45. Store old, file does not exist
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> stor old file.txt
-+Will create new file
-> size 8
-+Saved user1/file.txt
-> done
-+Closing connection
-
-46. Store old, file exists
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> stor old file.txt
-+Will write over old file
-> size 8
-+Saved user1/file.txt
-> done
-+Closing connection
-
-47. Store append, file does not exist
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> stor app file.txt
-+Will create new file
-> size 8
-+Saved user1/file.txt
-> done
-+Closing connection
-
-48. Store append, file exists
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> stor app file.txt
-+Will append to file
-> size 8
-+Saved user1/file.txt
-> done
-+Closing connection
-
-49. Store non-existent file
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> stor new fake.txt
-ERROR: File doesn't exist
-> done
-+Closing connection
-
-50. Store directory instead of file
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> stor new client
-ERROR: Specifier is not a file
-> done
-+Closing connection
-
-51. Store, argument error
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> user user1
-!user1 logged in
-> stor app file.txt file.txt
-ERROR: Invalid Arguments
-Usage: STOR { NEW | OLD | APP } file-spec
-> stor a
-ERROR: Invalid Arguments
-Usage: STOR { NEW | OLD | APP } file-spec
-> stor app file.txt
-+Will append to file
-> size 8 8
-ERROR: Invalid Arguments
-Usage: SIZE number-of-bytes-in-file
-> done
-+Closing connection
-
-52. Access denied
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> type a
--Please log in first
-> list f
--Please log in first
-> name rename.txt
--Please log in first
-> done
-+Closing connection
-
-53. Unknown command
-Successfully connected to localhost on port 6789
-+RFC 913 SFTP Server
-> unknown
-ERROR: Invalid Command
-Available Commands: "USER", "ACCT", "PASS", "TYPE", "LIST", "CDIR", "KILL", "NAME", "TOBE", "DONE", "RETR", "SEND", "STOP", "STOR", "SIZE"
-> done
-+Closing connection
+**36. Invalid command**
+~~~
++[hostname] RFC-913 SFTP
+Enter command: hello
+-Invalid command
+Enter command: store
+-Invalid command
+Enter command: :)
+-Invalid command
+Enter command: DONE
++Connection closed.
+~~~
